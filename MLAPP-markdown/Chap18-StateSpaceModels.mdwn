@@ -1,0 +1,447 @@
+[toc]
+
+
+# 18 状态空间模型(State space models)
+
+## 18.1 引言(Introduction)
+
+状态空间模型(SSM)类似于HMM，只是隐藏状态是连续的。模型可以写为如下的泛型形式
+$$
+\begin{aligned}
+    \mathbf{z}_t  &= g(\mathbf{u}_t,\mathbf{z}_{t-1},\boldsymbol{\epsilon}_t) \\
+    \mathbf{y}_t &= h(\mathbf{z}_t,\mathbf{u}_t,\boldsymbol{\delta}_t)\tag{18.2}
+\end{aligned}
+$$
+其中$\mathbf{z}_t$是隐状态，$\mathbf{u}_t$是一个可选输入或控制信号，$\mathbf{y}_t$是观测值，$g$是暂态模型，$h$是观测模型，$\boldsymbol{\epsilon}_t$是在$t$时刻的系统噪声，$\boldsymbol{\delta}_t$是在$t$时刻的观测噪声。我们假设模型的所有参数$\boldsymbol{\theta}$是已知的；如果不是，可将其纳入到隐状态中。
+
+使用SSM的首要目的就是递归的**估计信念状态(blief state)**$p(\mathbf{z}_t\vert\mathbf{y}_{1:t},\mathbf{u}_{1:t},\boldsymbol{\theta})$。我们将在本章后面讨论算法。我们将讨论如何通过计算后验预测$p(\mathbf{y}_{t+1}\vert\mathbf{y}_{1:t})$将我们关于隐状态的信念转化为关于未来观测的预测。
+
+SSM的一个重要特例是所有的CPDs是线性高斯模型。换而言之，我们假设
+- 暂态模型是一个线性模型
+  $$
+    \mathbf{z}_t = \mathbf{A}_t\mathbf{z}_{t-1} + \mathbf{B}_t\mathbf{u}_t + \boldsymbol{\epsilon}_t    \tag{18.3}
+  $$
+- 观测模型是一个线性模型
+  $$
+    \mathbf{y}_t = \mathbf{C}_t\mathbf{z}_{1} + \mathbf{D}_t\mathbf{u}_t + \boldsymbol{\delta}_t    \tag{18.4}
+  $$
+- 系统噪声为高斯分布
+  $$
+  \boldsymbol{\epsilon}_t \sim \mathcal{N}(\mathbf{0},\mathbf{Q}_t) \tag{18.5}
+  $$
+- 观测噪声为高斯分布
+  $$
+  \boldsymbol{\delta}_t \sim \mathcal{N}(\mathbf{0},\mathbf{R}_t)\tag{18.6}
+  $$
+
+这个模型称为一个线性高斯SSM(LG-SSM)或是一个线性动态系统。如果参数$\boldsymbol{\theta}_t = (\mathbf{A}_t,\mathbf{B}_t,\mathbf{C}_t,\mathbf{D}_t,\mathbf{Q}_t,\mathbf{R}_t)$是关于时间独立的，那么称系统是**平稳的(stationary)**。
+
+LG-SSM是重要的，是因为它们支持**精确推理(exact inference)**。尤其是，如果初始信念状态是高斯分布，$\mathbf{p}(\mathbf{z}_1)=\mathcal{N}(\boldsymbol{\mu}_{1\vert0},\mathbf{\Sigma}_{1\vert0})$，那么所有的后续信念状态也将是高斯的；将它们记为$p(\mathbf{z}_t\vert\mathbf{y}_{1:t})=\mathcal{N}(\boldsymbol{\mu}_{t\vert t},\mathbf{\Sigma}_{t\vert t})$。我们可以使用著名的Kalman滤波器来有效的计算量。在讨论这些算法之前我们先讨论一些重要的应用。
+
+## 18.2 SSMs的应用(Applications of SSMs)
+SSMs有许多的应用。出于简化，我们主要关注LG-SSMs，尽管非线性与非高斯的SSMs也是经常使用。
+
+### 18.2.1 用于对象跟踪的SSMs(SSMs for object tracking)
+
+Kalman滤波最早的应用之一是从雷达等噪声测量中跟踪目标，如飞机和导弹。这里我们给出一个简单的例子来说明关键思想。考虑在二维平面中移动的对象。令$z_{1t}$与$z_{2t}$是对象的水平与垂直定位，令$\dot{z}_{1t}$与$\dot{z}_{2t}$是对象的速度。我们可以将这表示为一个状态变量$\mathbf{z}_t\in\mathbb{R}^4$，如下
+$$
+\mathbf{z}_t^T = (z_{1t}, z_{2t},\dot{z}_{1t},\dot{z}_{2t}) \tag{18.7}
+$$
+
+令我们假设对象是以常速运行的，但是有高斯随机噪声的干扰。那么我们将系统的动态建模为如下
+$$
+\begin{aligned}
+    \mathbf{z}_t &= \mathbf{A}_t\mathbf{z}_{t-1} + \boldsymbol{\epsilon}_t \\
+    \begin{pmatrix}
+        z_{1t} \\
+        z_{2t}\\
+        \dot{z}_{1t} \\
+        \dot{z}_{2t}
+    \end{pmatrix} &= \begin{pmatrix}
+        1 & 0 & \Delta & 0 \\
+        0 & 1 & 0 & \Delta \\
+        0 & 0 & 1 & 0 \\
+        0 & 0 & 0 & 1
+    \end{pmatrix} \begin{pmatrix}
+        z_{1,t-1} \\
+        z_{2,t-1}\\
+        \dot{z}_{1,t-1} \\
+        \dot{z}_{2,t-1}
+    \end{pmatrix} + \begin{pmatrix}
+        \epsilon_{1t} \\
+        \epsilon_{2t} \\
+        \epsilon_{3t} \\
+        \epsilon_{4t}
+    \end{pmatrix}   \tag{18.9}
+\end{aligned}
+$$
+其中$\boldsymbol{\epsilon}\sim\mathcal{N}(\mathbf{0,Q})$是系统噪声，且$\Delta$是采样周期。这就是说新的位置$z_{j,t}$是旧位置$z_{j,t-1}$加上$\Delta$乘以旧的速度$\dot{z}_{j,t-1}$加上随机噪声$\epsilon_{jt},j=1:2$。同样，旧的速度$\dot{z}_{j,t}$是旧的速度$\dot{z}_{j,t-1}$加上随机噪声。这称为**随机加速模型(random accelerations model)**，因为对象移动遵循牛顿定律，但是受制于速度的随机变化。
+
+现在，我们假设对象的位置是可观测的，但是速度不是可观测的。令$\mathbf{y}_{t}\in\mathbb{R}^2$代表了我们的观测，假设其受制于高斯噪声。我们可以将这个建模为
+$$ 
+\begin{aligned}
+\mathbf{y}_t &= \mathbf{C}_t\mathbf{z}_t + \boldsymbol{\delta}_t \\
+    \begin{pmatrix}
+    y_{1t} \\
+    y_{2t}
+\end{pmatrix} &= \begin{pmatrix}
+    1 & 0 & 0 & 0 \\
+    0 & 1 & 0 & 0
+\end{pmatrix} \begin{pmatrix}
+        z_{1t} \\
+        z_{2t}\\
+        \dot{z}_{1t} \\
+        \dot{z}_{2t}
+    \end{pmatrix} + \begin{pmatrix}
+        \delta_{1t} \\
+        \delta_{2t} \\
+        \delta_{3t} \\
+        \delta_{4t}
+    \end{pmatrix} 
+\end{aligned}
+$$
+其中$\boldsymbol{\delta}_t\sim\mathcal{N}(\mathbf{0,R}$是测量噪声。
+
+最终，我们需要具体化我们关于对象的状态的初始信念，$p(\mathbf{z}_1)$。我们假设这个是一个高斯$p(\mathbf{z}_1)=\mathcal{N}(\mathbf{z}_1\vert\boldsymbol{\mu}_{1\vert0},\mathbf{\Sigma}_{1\vert0})$。我们可以将先验忽略表示使$\mathbf{\Sigma}_{1\vert0}$适当宽，也就是$\mathbf{\Sigma}_{1\vert0}=\infty\mathbf{I}$。我们现在完全指定模型，且可以使用一个称为Kalman滤波器的算法来计算$p(\mathbf{z}_{t}\vert\mathbf{y}_{1:t})$执行序列贝叶斯。
+
+### 18.2.3 使用回溯最小二乘的在线参数学习(Online parameter learning using recursive least squares)
+
+我们使用SSMs对各种统计模型的参数执行贝叶斯推断。本节中，我们聚焦于线性回归；在18.5.3.2节中我们讨论对数几率回归。
+
+基本思想是令**隐藏状态代表回归参数**，且令(时变)观测模型代表当前的数据向量。更具体的是，将先验定义为$p(\boldsymbol{\theta})=\mathcal{N}(\boldsymbol{\theta}\vert\boldsymbol{\theta}_0,\mathbf{\Sigma}_0)$。(如果我们想执行在线ML估计，我们可以只设置为$\mathbf{\Sigma}_0=\infty\mathbf{I}$)令隐状态为$\mathbf{z}_t=\boldsymbol{\theta}$；如果我们假设回归参数不会改变，我们可以设置为$\mathbf{A}_t=\mathbf{I}$且$\mathbf{Q}_t = 0\mathbf{I}$，所以
+$$
+p(\boldsymbol{\theta}_t\vert\boldsymbol{\theta}_{t-1})= \mathcal{N}(\boldsymbol{\theta}_t\vert\boldsymbol{\theta}_{t-1},0\mathbf{I})=\delta_{\boldsymbol{\theta}_{t-1}}(\boldsymbol{\theta}_t)  \tag{18.12}
+$$
+如果我们令参数是随时间变化的，我们得到**线性动态模型**。令$\mathbf{C}_t=\mathbf{x}_t^T$且$\mathbf{R}_t=\sigma^2$，所以(非平稳的)观测模型形式如下
+$$
+\mathcal{N}(\mathbf{y}_t\vert \mathbf{C}_t\mathbf{z}_t,\mathbf{R}_t)=\mathcal{N}(\mathbf{x}_t^T\boldsymbol{\theta}_t,\sigma^2)  \tag{18.13}
+$$
+将Kalman滤波器应用到这个模型可以提供一种方式来更新我们关于参数的后验信念。这个称为**回溯最小二乘**或是**RLS**。
+
+我们可以得到更新的清晰形式。在18.3.1节中，我们显示对于后验均值Kalman更新为
+$$
+\boldsymbol{\mu}_t = \mathbf{A}_t\boldsymbol{\mu}_{t-1}+\mathbf{K}_t(\mathbf{y}_t-\mathbf{C}_t\mathbf{A}_t\boldsymbol{\mu}_{t-1})   \tag{18.14}
+$$
+其中$\mathbf{K}_t$是Kalman增益矩阵。基于方程18.39，我们可以证明$\mathbf{K}_t=\mathbf{\Sigma}_t\mathbf{C}_t^T\mathbf{R}_t^{-1}$。在这种背景下，我们有$\mathbf{K}_t=\mathbf{\Sigma}_t\mathbf{x}_t/\sigma^2$。因此，参数的更新变为了
+$$
+\hat{\boldsymbol{\theta}}_t = \hat{\boldsymbol{\theta}}_{t-1} + \frac{1}{\sigma^2}\mathbf{\Sigma}_{t\vert t}(y_t-\mathbf{x}_t^T\hat{\boldsymbol{\theta}}_{t-1})\mathbf{x}_t \tag{18.15}
+$$
+
+
+### 18.2.4 时间序列预测的SSM(SSM for time series forecasting*)
+
+SSMs非常适合用于时间序列预测。我们关注一元时间序列。
+
+首先，我们可能不明白为什么SSMs是有用的，因为预测的目标是预测未来可视变量，而不是估计一些系统的隐变量。确实，大多数用于时间序列预测的经典方法只是形式$\hat{y}_{t+1}=f(\mathbf{y}_{1:t},\boldsymbol{\theta})$的函数，其中隐变量没有什么用。**时间序列的状态空间方法的思想是根据捕获信号的不同方面的潜在过程创建数据的生成模型**。然后我们可以整合隐藏变量来计算可见性的后验预测。
+
+因为模型是线性高斯的，我们只要添加这些过程来解释可观测数据。这个称为结构化时间序列模型。下面我们解释一些基本构建模块。
+
+#### 18.2.4.1 局部水平模型(Local level model)
+
+最简单的隐过程称为局部水平模型，形式如下
+$$
+\begin{aligned}
+    y_t &= a_t+\epsilon_t^y,\quad \epsilon_t^y\sim\mathcal{N}(0,R) \\
+    a_t &= a_{t-1}+\epsilon_t^a,\quad \epsilon_t^a\sim\mathcal{N}(0,Q)
+\end{aligned}
+$$
+其中隐状态只是$\mathbf{z}_t=a_t$。这个模型认为观测数据$y_t\in\mathbb{R}$等于一些未知的水平项$a_t\in\mathbb{R}$，加上方差为$R$的观测噪声。另外，水平$a_t$随时间演化，系统的噪声方差为$Q$。图18.5是一些例子。
+
+#### 18.2.4.2 局部线性趋势(Local linear trend)
+
+许多时间序列展示出了向上或向下的趋势，至少在局部是这样的。我们可以令水平$a_t$在每步以$b_t$改变
+$$
+\begin{aligned}
+    y_t &= a_t + \epsilon_t^y,\quad \epsilon_t^y\sim\mathcal{N}(0,R) \\
+    a_t &= a_{t-1} + b_{t-1} + \epsilon_{t}^a,\quad \epsilon_t^a\sim\mathcal{N}\sim(0,Q_a) \\
+    b_t &= b_{t-1} + \epsilon_t^b,\quad \epsilon_t^b\sim\mathcal{N}(0,Q_b)\tag{18.20}
+\end{aligned}
+$$
+如图18.6(a)。我们可以将这个写为标准形式，通过定义$\mathbf{z}_t=(a_t,b_t)$且
+$$
+\mathbf{A}=\begin{pmatrix}
+    1 & 1\\
+    0 & 1
+\end{pmatrix},\mathbf{C} = \begin{pmatrix}
+    1 & 0
+\end{pmatrix}, \mathbf{Q} = \begin{pmatrix}
+    Q_a & 0 \\
+    0 & Q_b
+\end{pmatrix}   \tag{18.21}
+$$
+当$Q_b=0$时，我们有$b_t=b_0$，这是定义直线斜率的一些常量。如果，另外我们有$Q_a=0$，那么我们有$a_t=a_{t-1}+b_0t$。展开这个，我们有$a_t=a_0+b_0t$，因此有$\mathbb{E}[y_t\vert\mathbf{y}_{1:t-1}]=a_0+tb_0$。因此，这是经典的恒定线性趋势模型的推广，图18.6(b)的黑线显示了一个例子。
+
+#### 18.2.4.3 季节性(Seasonality)
+![image](Figure%2018.7.png)
+
+许多时间序列周期性波动，如图18.7(b)中所示。这个过程可通过添加含有一个时间序列偏移项$c_t$的隐过程来建模，其中$c_t$在一个完整的$S$步循环上加和为$0$
+$$
+c_t = -\sum_{s=1}^{S-1}c_{t-s}+\epsilon_t^c, \epsilon_t^c\sim\mathcal{N}(0,Q_c)   \tag{18.22}
+$$
+图18.7(a)是对于$S=4$中的图模型。
+
+#### 18.2.4.4 ARMA模型(ARMA models*)
+
+时间序列预测的一个经典模型是基于**AMRA**模型，“ARMA”意思是自回归移动平均，模型的形式是
+$$
+x_t = \sum_{i=1}^p \alpha_i x_{t-i}+\sum_{j=1}^q\beta_jw_{t-j}+v_t\tag{18.23}
+$$
+其中$v_t,w_t\sim\mathcal{N}(0,1)$是独立高斯噪声项。如果$q=0$我们有一个纯净的AR模型，其中$x_t\perp x_i\vert x_{t-1:t-p}，i<t-p$。例如，如果$p=1$，我们有AR(1)模型，如图18.8(a)显示。($v_t$点在$x_t$的高斯CPD中是明显的。)这只是一个一阶Markov链。如果$p=0$，我们有一个纯MA模型，其中$x_t\perp x_i，i\lt t-q$。例如，如果$q=1$，我们有MA(1)模型，如图18.8(b)。这里$w_t$点是隐藏的公共原因，这导致相邻时间步之间存在依赖关系。这个模型是短区间关联。如果$p=q=1$，我们得到$ARMA(1,1)$模型，如图18.8(c)所示，捕获了短期与长期的时间规模。
+
+可以证明ARMA模型可以被展示为SSMs。然而，时间序列的结构化方法比ARMA方法更易理解。另外，它允许参数随时间变化，使得模型对非平稳更加适应。
+
+![image](Figure18.8.png)
+
+## 18.3 LG-SSM中的推断(Inference in LG-SSM)
+本节中我们讨论LG-SSM模型中的精确推断。我们首先考虑在线情况，类似于HMMs中的**前向算法**。我们然后考虑离线情况，这类似于HMMs的**向前向后算法**。
+### 18.3.1 Kalman滤波器的算法(The Kalman filtering algorithm)
+Kalman滤波是**线性高斯状态空间模型**(LG-SSM)的一个精确贝叶斯滤波器的算法。将时刻$t$的边缘后验展示为
+$$
+p(\mathbf{z}_t\vert\mathbf{y}_{1:t},\mathbf{u}_{1:t})=\mathcal{N}(\mathbf{z}_t\vert\boldsymbol{\mu}_t,\mathbf{\Sigma}_t)  \tag{18.24}
+$$
+因为一切都是高斯分布，我们以闭形执行预测与更新步骤。得到的算法是第17.4.2节中HMM滤波器的高斯模拟。
+
+#### 18.3.1.1 预测步骤(Prediction step)
+预测步骤是可以直接得到的
+$$
+\begin{aligned}
+  p(\mathbf{z}_t\vert\mathbf{y}_{1:t-1},\mathbf{u}_{1:t-1}) & = \int\mathcal{N}(\mathbf{z}_t\vert\mathbf{A}_t\mathbf{z}_{t-1} + \mathbf{B}_t\mathbf{u}_{t},\mathbf{Q}_t) \mathcal{N}(\mathbf{z}_{t-1}\vert\boldsymbol{\mu}_{t-1},\mathbf{\Sigma}_{t-1})d\mathbf{z}_{t-1} \\
+  &= \mathcal{N}(\mathbf{z}_{t}\vert  \boldsymbol{\mu}_{t\vert t-1},\mathbf{\Sigma}_{t\vert t-1}) \\
+  \boldsymbol{\mu}_{t\vert t-1} & \triangleq \mathbf{A}_t\boldsymbol{\mu}_{t-1} + \mathbf{B}_t\mathbf{u}_t \\
+  \mathbf{\Sigma}_{t\vert t-1} & \triangleq \mathbf{A}_t\mathbf{\Sigma}_t\mathbf{A}_t + \mathbf{Q}_t
+\end{aligned}
+$$
+
+#### 18.3.1.2 测量步骤(Measurement step)
+可以使用贝叶斯规则计算测量步骤，如下
+$$
+p(\mathbf{z}_t\vert\mathbf{y}_t,\mathbf{y}_{1:t-1},\mathbf{u}_{1:t})\propto p(\mathbf{y}_t\vert\mathbf{z}_t,\mathbf{u}_t)p(\mathbf{z}_t\vert \mathbf{y}_{1:t-1},\mathbf{u}_{1:t}) \tag{18.29}
+$$
+在18.3.1.6节中，我们证明这个给定为
+$$
+\begin{aligned}
+  p(\mathbf{z}_t\vert \mathbf{y}_{1:t-1},\mathbf{u}_{1:t}) &= \mathcal{N}(\mathbf{z}_t\vert \boldsymbol{\mu}_t,\mathbf{\Sigma}_t) \\
+  \boldsymbol{\mu}_t &= \boldsymbol{\mu}_{t,\vert t-1} + \mathbf{K}_t\mathbf{r}_t \\
+  \mathbf{\Sigma}_t &= (\mathbf{I-K}_t\mathbf{C}_t)\mathbf{\Sigma}_{t,\vert t-1} \tag{18.30-18.32}
+\end{aligned}
+$$
+其中$\mathbf{r}_t$是残差或是新息，给定为我们预测观测值与真实观测值之间的差值：
+$$
+\begin{aligned}
+  \mathbf{r}_t &\triangleq \mathbf{y}_t - \hat{\mathbf{y}}_t \\
+  \hat{\mathbf{y}}_t &\triangleq \mathbb{E}[\mathbf{y}_t\vert \mathbf{y}_{1:t-1},\mathbf{u}_{1:t}] = \mathbf{C}_t\boldsymbol{\mu}_{t,\vert t-1} + \mathbf{D}_t\mathbf{u}_t \tag{18.33-18.34}
+\end{aligned}
+$$
+且$\mathbf{K}_t$是Kalman增益矩阵，给定为
+$$
+\mathbf{K}_t \triangleq \mathbf{\Sigma}_{t\vert t-1}\mathbf{C}_t^T\mathbf{S}_t^{-1}   \tag{18.35}
+$$
+其中
+$$
+\begin{aligned}
+  \mathbf{S}_t & \triangleq \text{cov}[\mathbf{r}_t \vert \mathbf{y}_{1:t-1},\mathbf{u}_{1:t} ] \\
+  & = \mathbb{E} [(\mathbf{C}_t\mathbf{z}_{1} + \boldsymbol{\delta}_t - \hat{\mathbf{y}}_t)(\mathbf{C}_t\mathbf{z}_{1} + \boldsymbol{\delta}_t - \hat{\mathbf{y}}_t)^T \vert \mathbf{y}_{1:t-1},\mathbf{u}_{1:t}] \\
+  & = \mathbf{C}_t\mathbf{\Sigma}_{t\vert t-1}\mathbf{C}_t^T+\mathbf{R}_t     \tag{18.36-18.38}
+\end{aligned}
+$$
+其中$\boldsymbol{\delta}_t\sim\mathcal{N}(\mathbf{0,R}_t)$是一个观测噪声项，独立于所有的噪声源。通过使用矩阵逆定理，Kalman增益矩阵也可以写为
+$$
+\mathbf{K}_t \triangleq \mathbf{\Sigma}_{t\vert t-1}\mathbf{C}_t^T(\mathbf{C}_t\mathbf{\Sigma}_{t\vert t-1}\mathbf{C}_t^T+\mathbf{R}_t)^{-1} = (\mathbf{\Sigma}_{t\vert t-1}^{-1}+ \mathbf{C}_t^T\mathbf{R}_t\mathbf{C}_t)^{-1}\mathbf{C}_t^T\mathbf{R}_t^{-1} \tag{18.39}
+$$
+
+我们现在使这些方程变得有意义。尤其是，考虑均值更新方程：$\boldsymbol{\mu}_t=\boldsymbol{\mu}_{t\vert t-1}+\mathbf{K}_t\mathbf{r}_t$。这意味着新的均值为旧的均值加上一个更正因子，也就是$\mathbf{K}_t$乘以误差信号$\mathbf{r}_t$。给定误差信号的权重量依赖于Kalman增益矩阵。如果$\mathbf{C}_t=\mathbf{I}$，那么$\mathbf{K}_t=\mathbf{\Sigma}_{t\vert t-1}\mathbf{S}_t^{-1}$是先验协方差与测量误差的协方差的比率。如果我们有一个强先验与/或噪声很多的传感器，$\vert\mathbf{K}_t \vert$将会很小，且我们将在更正项上给予很小的权重。相反的，如果我们有一个弱先验或高精度传感器，那么$\vert\mathbf{K}_t \vert$将会很大，在更正项上给予很大的权重。
+
+#### 18.3.1.3 边缘似然(Marginal likelihood)
+
+作为算法的副产品，我们可以对数似然序列
+$$
+\log p(\mathbf{y}_{1:T}\vert\mathbf{u}_{1:T}) = \sum_{t}\log p(\mathbf{y}_t \vert \mathbf{y}_{1:t-1},\mathbf{u}_{1:t})    \tag{18.40}
+$$
+其中
+$$
+\log p(\mathbf{y}_t \vert \mathbf{y}_{1:t-1},\mathbf{u}_{1:t}) = \mathcal{N}(\mathbf{y}_t \vert \mathbf{C}_t\boldsymbol{\mu}_{t,\vert t-1}, \mathbf{S}_t)
+$$
+
+#### 18.3.1.4 后验预测(Posterior predictive)
+观测值的前一步后验预测密度可计算如下
+$$
+\begin{aligned}
+  p(\mathbf{y}_t \vert \mathbf{y}_{1:t-1},\mathbf{u}_{1:t}) & = \int \mathcal{N}(\mathbf{y}_t \vert \mathbf{C}_t\mathbf{z}_t,\mathbf{R})\mathcal{N}(\mathbf{z}_{t}\vert  \boldsymbol{\mu}_{t\vert t-1},\mathbf{\Sigma}_{t\vert t-1})d\mathbf{z}_t \\
+  & = \mathcal{N}(\mathbf{y}_t \vert \mathbf{C}\boldsymbol{\mu}_{t,\vert t-1}, \mathbf{C}\mathbf{\Sigma}_{t\vert t-1}\mathbf{C}^T+\mathbf{R})   \tag{18.42-18.43}
+\end{aligned}
+$$
+这对时间序列预测很有用。
+
+#### 18.3.1.5 计算问题(Computational issues)
+卡尔曼滤波器有两个主要成本：计算Kalman增益矩阵$\mathbf{K}_t$的逆矩阵，消耗时间为$O(\vert\mathbf{y}_t\vert^3)$；计算$\mathbf{\Sigma}_t$的矩阵相乘，消耗时间为$O(\vert\mathbf{z}_t\vert^2)$。在一些应用中(如机器人mapping)，我们有$\vert\mathbf{z}_t\vert\gg\vert\mathbf{y}_t\vert$，所以后者的成本为主。然而在这种情况下，我们有时会使用稀疏近似。
+
+在$\vert\mathbf{z}_t\vert\ll\vert\mathbf{y}_t\vert$情况中，我们可以提前计算$\mathbf{K}_t$，因为其不依赖于实际的观测值$\mathbf{y}_{1:t}$(线性高斯系统特有的一种特殊性质)。更新$\mathbf{\Sigma}_t$的迭代方程称为黎卡提方程(**RicattiEquations**)，且对于时不变系统(也就是$\boldsymbol{\theta}_t=\boldsymbol{\theta}$)，它们将收敛于一个固定的点。然后，可以使用该稳态解来代替使用特定时间的增益矩阵。
+
+实际上，出于数值稳定性的原因，应该使用更复杂的Kalman滤波器实现。一种方法是信息滤波器(**InformationFilter**)，它递归地更新高斯的正则参数$\mathbf{\Lambda}_t=\mathbf{\Sigma}_t^{-1},\boldsymbol{\eta}_t=\mathbf{\Lambda}_t\boldsymbol{\mu}_t$，而不是矩参数。另一种方法是平方根滤波器，使用$\mathbf{\Sigma}_t$的Cholesky分解或谱分解$\mathbf{U}_t\mathbf{D}_t\mathbf{U}_t$。这个比直接更新$\mathbf{\Sigma}_t$更加数值稳定。
+
+#### 18.3.1.6 推导(Derivation*)
+
+我们现在推导Kalman滤波器的方程。出于符号简化，我们有将忽略输入项$\mathbf{u}_{1:t}$。根据高斯的贝叶斯规则，我们有后验精度为
+$$
+\mathbf{\Sigma}_t^{-1}=\mathbf{\Sigma}_{t\vert t-1}^{-1} + \mathbf{C}_t^T\mathbf{R}_t^{-1}\mathbf{C}_t  \tag{18.44}
+$$
+根据矩阵逆定理，我们重写为
+$$
+\begin{aligned}
+  \mathbf{\Sigma}_t &= \mathbf{\Sigma}_{t\vert t-1} - \mathbf{\Sigma}_{t\vert t-1} \mathbf{C}_t^T(\mathbf{R}_t + \mathbf{C}_t \mathbf{\Sigma}_{t\vert t-1} \mathbf{C}_t^T)^{-1}\mathbf{C}_t \mathbf{\Sigma}_{t\vert t-1} \\
+  &= (\mathbf{I-K}_t\mathbf{C}_t)\mathbf{\Sigma}_{t\vert t-1} \tag{18.45-18.46}
+\end{aligned}
+$$
+
+根据高斯的贝叶斯规则，后验均值为
+$$
+\boldsymbol{\mu}_t = \mathbf{\Sigma}_t\mathbf{C}_t\mathbf{R}_t^{-1}\mathbf{y}_t + \mathbf{\Sigma}_t \mathbf{\Sigma}_{t\vert t-1}^{-1} \boldsymbol{\mu}_{t\vert t-1}     \tag{18.47}
+$$
+现在我们将把它改成前面提到的形式。将第二个矩阵逆引理(方程4.107)应用于方程18.47的第一项，我们得到
+$$
+\begin{aligned}
+  \mathbf{\Sigma}_t\mathbf{C}_t\mathbf{R}_t^{-1}\mathbf{y}_t &= (\mathbf{\Sigma}_{t\vert t-1}^{-1} + \mathbf{C}_t^T\mathbf{R}_t^{-1}\mathbf{C}_t)^{-1}\mathbf{C}_t\mathbf{R}_t^{-1}\mathbf{y}_t \\
+  &= \mathbf{\Sigma}_{t\vert t-1} \mathbf{C}_t^T (\mathbf{R}_t + \mathbf{C}_t \mathbf{\Sigma}_{t\vert t-1} \mathbf{C}_t^T)^{-1}\mathbf{y}_t = \mathbf{K}_t\mathbf{y}_t \tag{18.49}
+\end{aligned}
+$$
+现在将矩阵逆定理(方程4.106)应用于方程18.47的第二项，我们得到
+$$
+\begin{aligned}
+   \mathbf{\Sigma}_t \mathbf{\Sigma}_{t\vert t-1}^{-1} \boldsymbol{\mu}_{t\vert t-1} &= (\mathbf{\Sigma}_{t\vert t-1}^{-1} + \mathbf{C}_t^T\mathbf{R}_t^{-1}\mathbf{C}_t)^{-1} \mathbf{\Sigma}_{t\vert t-1}^{-1} \boldsymbol{\mu}_{t\vert t-1} \\
+   &= [\mathbf{\Sigma}_{t\vert t-1} - \mathbf{\Sigma}_{t\vert t-1} \mathbf{C}_t^T (\mathbf{R}_t + \mathbf{C}_t \mathbf{\Sigma}_{t\vert t-1} \mathbf{C}_t^T)\mathbf{C}_t \mathbf{\Sigma}_{t\vert t-1} ]\mathbf{\Sigma}_{t\vert t-1}^{-1} \boldsymbol{\mu}_{t\vert t-1} \\
+   &= [\mathbf{\Sigma}_{t\vert t-1} - \mathbf{K}_t\mathbf{C}_t^T\mathbf{\Sigma}_{t\vert t-1}]\mathbf{\Sigma}_{t\vert t-1}^{-1} \boldsymbol{\mu}_{t\vert t-1} \\
+   &= \boldsymbol{\mu}_{t\vert t-1} - \mathbf{K}_t\mathbf{C}_t^T \boldsymbol{\mu}_{t\vert t-1} 
+\end{aligned}
+$$
+将二者合并得到
+$$
+\boldsymbol{\mu}_t = \boldsymbol{\mu}_{t\vert t-1} + \mathbf{K}_t(\mathbf{y}_t - \mathbf{C}_t^T \boldsymbol{\mu}_{t\vert t-1})
+$$
+
+## 18.4 LG-SSM的学习(Learning for LG-SSM)
+
+在本节中，我们将简要讨论如何估计LG-SSM的参数。在控制理论界，这被称为系统辨识(Ljung 1987)。
+
+当使用SSMs进行时间序列预测时，以及在一些物理状态估计问题中，通过定义模型，观测矩阵$\mathbf{C}$和转移矩阵$\mathbf{A}$都是已知的和固定的。在这种情况下，需要学习的就是噪声协方差$\mathbf{Q}$和$\mathbf{R}$(初始状态估计$\mu_0$通常不那么重要，因为它会在几个时间步后被数据“冲走”。这可以通过将初始状态协方差设置为大，表示弱先验来鼓励这一点。)虽然我们可以离线估计$\mathbf{Q}$和$\mathbf{R}$，但也可以使用如下方法推导出一个递归过程来精确计算具有正态逆Wishart形式的后验$p(\mathbf{z}_t,\mathbf{R},\mathbf{Q}\vert\mathbf{y}_{1:t})$；详见（West and Harrison 1997；Prado and West 2010）。
+
+### 18.4.1 可识别性与数值稳定(Identifiability and numerical stability)
+在更一般的情况下，隐藏状态没有预先指定的含义，我们需要学习$\mathbf{A}$与$\mathbf{C}$。然而，这种情况下，不失一般性的，我们可以设置$\mathbf{Q} = \mathbf{I}$，因为任意一个噪声的协方差矩阵可以通过恰当修改$\mathbf{A}$建模得到的。同样，通过与因子分析相类比，不会失去一般性的，我们可以要求$\mathbf{R}$是对角的。这样做可以减少自由参数的数量并提高数值稳定性。
+
+施加另一个有用的约束条件是动态矩阵$\mathbf{A}$的特征值。要了解为什么这很重要，请考虑无系统噪声的情况。在这种情况下，时间$t$的隐藏状态为
+$$
+\mathbf{z}_t = \mathbf{A}^t\mathbf{z}_1 = \mathbf{U\Lambda}^t\mathbf{U}^{-1}\mathbf{z}_1    \tag{17.89}
+$$
+其中$\mathbf{U}$是$\mathbf{A}$的特征向量的矩阵，且$\mathbf{\Lambda}=\text{diag}(\lambda_i)$包含了特征值。如果任意的$\lambda_i\gt1$，那么对于大的$t$，$\mathbf{z}_t$会爆炸。因此，为确保系统稳定性，要求所有特征值均小于1是很有用的(Siddiqi et al. 2007)。当然，如果所有特征值均小于1，那么对于大的$t$有$\mathbb{E}(\mathbf{z}_t)=\mathbf{0}$，所以状态会返回原点。幸运的是，当我们添加噪声时，状态变为非零，因此模型不会退化。
+
+下面我们讨论如何估计参数。但是，为了简化说明，我们不施加任何上述约束。
+
+### 18.4.2 使用完全可观测数据训练(Training with fully observed data)
+
+如果我们观察到隐藏状态序列，则可以通过求解$\mathbf{z}_{t-1}\rightarrow\mathbf{z}_t$以及$\mathbf{z}_t\rightarrow\mathbf{y}_t$的多元线性回归问题来计算参数的MLE(甚至整个后验)而拟合模型。这就是说，我们可以通过求解最小二乘问题$J(\mathbf{A})=\sum_{t=1}^2(\mathbf{z}_{t}- \mathbf{A}\mathbf{z}_{t-1})^2$估计$\mathbf{A}$，对于$\mathbf{C}$也是类似。我们可以从预测$\mathbf{z}_{t-1}\rightarrow\mathbf{z}_t$中的残差来估计系统噪声协方差$\mathbf{Q}$，在$\mathbf{z}_t\rightarrow\mathbf{y}_t$中的残差来估计观测噪声协方差。
+
+### 18.4.3 LG-SSM的EM算法(EM for LG-SSM)
+
+如果仅观察输出序列，则可以使用$EM$计算参数的$ML$或$MAP$估计。该方法在概念上与HMM的Baum-Welch算法非常相似(第17.5节)，不同之处在于，我们在E步骤中使用Kalman平滑代替了前向后向方法，而在M步骤中使用了不同的计算。 我们将细节留给练习18.1。
+
+### 18.4.4 子空间方法(Subspace methods)
+
+EM并不总是给出令人满意的结果，因为它对初始参数估计很敏感。避免这种情况的一种方法是使用另一种称为**子空间方法**(**sub-space method**)的方法(Overschee and Moor 1996; Katayama 2005)。
+
+为了理解这种方法，我们首先假设没有观察到的噪声和系统的噪声。这种情况下，我们有$\mathbf{z}_t = \mathbf{A}\mathbf{z}_{t-1}$与$\mathbf{y}_t = \mathbf{C}\mathbf{z}_{t}$，因此有$\mathbf{y}_t = \mathbf{C}\mathbf{A}^{t-1}\mathbf{z}_{1}$。因此，所有观测值必须从一$\dim(\mathbf{z}_t)$维的线性流形或子空间生成。我们可以使用PCA识别此子空间(有关详细信息，请参见上面的参考)。估算出$\mathbf{z}_t$之后，我们就可以像完全观察到的那样对模型进行拟合。我们可以单独使用这些估计，也可以使用它们来初始化EM。
+
+### 18.4.5 拟合LG-SSMs的贝叶斯方法(Bayesian methods for "fitting" LG-SSMs)
+EM算法有多种离线贝叶斯替代方法，包括变分Bayes EM(Beal 2003; Barber and Chiappa 2007) 和阻尼Gibbs采样(Carter and Kohn 1994;Cappe et al. 2005；Fruhwirth-Schnatter 2007)。如我们在第18.2.3节中所述，贝叶斯方法也可以用于执行在线学习。不幸的是，一旦我们将SSM参数添加到状态空间，该模型通常将不再是线性高斯模型。因此，我们必须使用下面将要讨论的一些近似在线推理方法。
+
+## 18.5 非线性非高斯SSMs的近似在线推断(Approximate online inference for non-linear, non-Gaussian SSMs)
+
+在第18.3.1节中，我们讨论了如何为LG-SSM执行精确的在线推断。但是，许多模型是非线性的。例如，大多数移动的对象不会直线移动。即使它们做到了，如果我们假设模型的参数未知，并将其添加到状态空间中，则模型将变为非线性。此外，非高斯噪声也很常见，例如，由于**离群值或在推断GLM的参数而不仅仅是线性回归时**。对于这些更通用的模型，我们需要使用近似推断。
+
+我们下面讨论的近似推理算法通过高斯近似后验。一般，如果$Y=f(x)$，其中$X$是一个高斯分布，$f$是一个非线性函数，这里主要有两种方式通过一个高斯近似$p(Y)$。第一个是使用$f$的一个一阶近似。第二个是使用精确$f$，但是通过阶矩匹配将$f(X)$映射到高斯空间。我们将轮流讨论这些方法。(另请参阅第23.5节，我们讨论粒子滤波，这是一种用于近似在线推理的随机算法，该算法对后验使用非参数近似，通常更精确，但计算速度较慢。)
+
+### 18.5.1 Extended Kalman filter (EKF)
+
+在本节中，我们将重点放在非线性模型上，但是我们假设噪声是高斯噪声。也就是说，我们考虑以下形式的模型
+$$
+\begin{aligned}
+  \mathbf{z}_t &= g(\mathbf{u}_t, \mathbf{z}_{t-1})+\mathcal{N}(\mathbf{0,Q}_t) \\
+  \mathbf{y}_t &= h(\mathbf{z}_t) + \mathcal{N}(\mathbf{0,R}_t)
+\end{aligned}
+$$
+其中暂态模型$g$与观测模型$h$是非线性但是可微的函数。此外，我们着重于通过单个高斯近似后验的情况。(处理一般后验(例如多模态，离散等)的最简单方法是使用粒子滤波，我们将在第23.5节中讨论)。
+
+**扩展卡尔曼滤波器**或**EKF**可以应用于这种形式的非线性高斯动态系统。基本思想是使用一阶泰勒级数展开将先前状态估计的g和h线性化，然后应用标准卡尔曼滤波器方程式。(方程($\mathbf{Q}$和$\mathbf{R}$)中的噪声方差没有改变，即，由于线性化而导致的附加误差未建模。)因此，我们用非平稳线性动力学系统来近似静态非线性动力学系统。
+
+![image](Figure18.9.png)
+该方法背后的直观展示如图18.9所示，它显示了当我们通过右下角的一个高斯分布$p(x)$通过右上角所示的非线性函数$y=g(x)$时会发生什么。得到的分布(由Monte Carlo近似)显示在左上角的灰色阴影区域。实心黑线显示了最佳的高斯近似，它是由蒙特卡洛(Monte Carlo)根据$\mathbb{E}[g(x)]$和$\text{var}[g(x)]$计算得出的。EKF按如下方式近似该高斯：它在当前众数$\mu$下线性化$g$函数，然后通过该线性化函数传递高斯分布$p(x)$。在此示例中，结果非常近似于$p(y)$的第一和第二矩，而成本却比MC近似值低得多。
+
+更详细地说，该方法的工作原理如下。我们使用
+$$
+p(\mathbf{y}_t\vert\mathbf{z}_t) \approx  \mathcal{N}(\mathbf{y}_t\vert\mathbf{h}(\boldsymbol{\mu}_{t\vert t-1}) + \mathbf{H}_t(\mathbf{y}_t - \boldsymbol{\mu}_{t\vert t-1}),\mathbf{R}_t) 
+$$
+近似**测量模型**，其中$\mathbf{H}_t$是$\mathbf{h}$在先验众数下计算的Jacobian矩阵
+$$
+\begin{aligned}
+  H_{ij} & \triangleq \frac{\partial h_i(\mathbf{z})}{\partial z_j} \\
+  \mathbf{H}_t & \triangleq \mathbf{H}\vert_{\mathbf{z}=\boldsymbol{\mu}_{t\vert t-1}}
+\end{aligned}
+$$
+类似的，可以近似系统模型
+$$
+p(\mathbf{z}_t\vert\mathbf{z}_{t-1},\mathbf{u}_t) \approx  \mathcal{N}(\mathbf{z}_t\vert\mathbf{g}(\mathbf{u}_t,\boldsymbol{\mu}_{t\vert t-1}) + \mathbf{G}_t(\mathbf{z}_{t-1} - \boldsymbol{\mu}_{t\vert t-1}),\mathbf{Q}_t) 
+$$
+其中
+$$
+\begin{aligned}
+  G_{ij}(\mathbf{u}) & \triangleq \frac{\partial g_i(\mathbf{u}, \mathbf{z})}{\partial z_j} \\
+  \mathbf{G}_t & \triangleq \mathbf{G}(\mathbf{u}_t)\vert_{\mathbf{z}=\boldsymbol{\mu}_{t\vert t-1}}
+\end{aligned}
+$$
+其中$\mathbf{G}_t$是$\mathbf{g}$在先验众数下计算的Jacobian矩阵。
+
+鉴于此，我们可以应用Kalman滤波器计算后验概率，如下所示：
+$$
+\begin{aligned}
+  \boldsymbol{\mu}_{t\vert t-1} & = \mathbf{g}(\mathbf{u}_t,\boldsymbol{\mu}_{t-1}) \\
+  \mathbf{V}_{t\vert t-1} &= \mathbf{G}_t \mathbf{V}_{t-1} \mathbf{G}_t^T + \mathbf{Q}_t \\
+  \mathbf{K}_t &= \mathbf{V}_{t\vert t-1} \mathbf{H}_t^T (\mathbf{H}_t \mathbf{V}_{t\vert t-1} \mathbf{H}_t^T + \mathbf{R}_t)^{-1} \\
+  \boldsymbol{\mu}_t & = \boldsymbol{\mu}_{t\vert t-1} + \mathbf{K}_t(\mathbf{y}_t - \mathbf{h} (\boldsymbol{\mu}_{t\vert t-1})) \\
+  \mathbf{V}_t &= (\mathbf{I} - \mathbf{K}_t\mathbf{H}_t)\mathbf{V}_{t\vert t-1}
+\end{aligned}
+$$
+我们看到与常规Kalman滤波的唯一区别是当我们计算状态预测时，我们用$\mathbf{g}(\mathbf{u}_t,\boldsymbol{\mu}_{t-1})$替代$\mathbf{A}_t\boldsymbol{\mu}_{t-1} + \mathbf{B}_t\mathbf{u}_t$，计算测量更新时使用$\mathbf{h} (\boldsymbol{\mu}_{t\vert t-1})$替代$\mathbf{C}_t \boldsymbol{\mu}_{t\vert t-1}$。
+
+通过围绕$\boldsymbol{\mu}$重复线性化方程，是可以提升性能的，这称为迭代EKF。尽管更慢，但是会产生更好的结果。
+
+有两种情况下EKF效果不佳。第一种情况是**先验协方差较大时**。在这种情况下，先验分布是广泛的，所以我们最终通过函数的不同部分发送大量的概率质量，这些部分远离平均值，函数已经线性化。EKF工作不好的另一个设置是当函数在当前平均值附近高度非线性时。在18.5.2节中，我们将讨论一种称为UKF的算法，它在这两种设置下都比EKF更好。
+
+### 18.5.2 无迹卡尔曼滤波(Unscented Kalman filter) (UKF)
+
+**unscented Kalman filter**(UKF)是EKF的一个更好的版本（Julier和Uhlmann 1997）。(很明显，这是因为它“不臭”)关键的直觉是：近似高斯比近似函数更容易。因此，与其对函数进行线性近似，并传递其一个高斯函数，不如给函数传递一组确定选择的点，称为sigma点，然后将高斯拟合到得到的转换点。这被称为unscented变换，如图18.10所示。（我们将在下面详细解释这个数字。）
+
+![image](Figure18.10.png)
+
+UKF基本上使用了两次无迹变换，一次近似通过系统模型$g$，一次近似通过测量模型$h$。我们给出了以下详细信息。注意，UKF和EKF都在每个时间步执行$O(d^3)$操作，其中$d$是潜在状态空间的大小。然而，UKF至少精确到二阶，而EKF只是一阶近似（尽管EKF和UKF都可以扩展到捕获高阶项）。此外，unscented变换不需要对任何导数或jacobian（一种所谓的无导数滤波器）进行分析计算，使其实现更简单，应用更广泛。
+
+#### 18.5.2.1 无迹变换(The unscented transform)
+
+在解释UKF之前，我们首先解释无迹变换。假设$p(\mathbf{x})=\mathcal{N}(\mathbf{x}\vert\boldsymbol{\mu},\mathbf{\Sigma})$，考虑估计$p(\mathbf{y})$，其中$\mathbf{y}=\mathbf{f}(\mathbf{x})$是一些非线性函数$\mathbf{f}$。无迹变换如下操作。首先，创建一个包含$2d+1$个sigma点$\mathbf{x}_i$的集合，给定为
+$$
+\mathbf{x}=\left( \boldsymbol{\mu},\{ \boldsymbol{\mu} + (\sqrt{(d+\lambda)\mathbf{\Sigma} })_{:i} \}_{i=1}^d, \{ \boldsymbol{\mu} - (\sqrt{(d+\lambda)\mathbf{\Sigma} })_{:i} \}_{i=1}^d  \right)    \tag{18.93}
+$$
+其中$\lambda=\alpha^2(d+\kappa)-d$是一个缩放参数，符号$\mathbf{M}_{:i}$意味着矩阵$\mathbf{M}$的第$i$列。
+
+这些sigma点是通过非线性函数传播产生$\mathbf{y}_i = f(\mathbf{x}_i)$，且$\mathbf{y}$的均值与协方差计算如下
+$$
+\begin{aligned}
+  \boldsymbol{\mu}_y &= \sum_{i=0}^{2d}w_{m}^i\mathbf{y}_i \\
+  \mathbf{\Sigma}_y &= \sum_{i=0}^{2d}w_{c}^i (\mathbf{y}_i - \boldsymbol{\mu}_y)(\mathbf{y}_i - \boldsymbol{\mu}_y)^T \tag{18.94-18.95}
+\end{aligned}
+$$
+其中$w$是权重，给定为
+$$
+\begin{aligned}
+  w_{m}^i &= \frac{\lambda}{d+\lambda} \\
+  w_{c}^i &= \frac{\lambda}{d+\lambda} + (1-\alpha^2+\beta) \\
+  w_{m}^i &= w_{c}^i = \frac{1}{2(d+\lambda)}
+\end{aligned}
+$$
