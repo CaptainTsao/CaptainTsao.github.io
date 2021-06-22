@@ -1,4 +1,3 @@
-[toc]
 
 # 3 Generative models for discrete data
 ## 3.1 Introduction
