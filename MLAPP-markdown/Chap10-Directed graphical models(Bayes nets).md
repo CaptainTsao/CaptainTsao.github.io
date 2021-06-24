@@ -20,7 +20,7 @@ $$
 
 一种解决方案是用更节省的条件概率分布或CPD(如多项式logistic回归)替换每个CPT，例如$p(x_t=k\vert \mathbf{x}_{1:t-1})=\mathcal{S}(\mathbf{W}_{t}\mathbf{x}_{1:t-1})_k$。参数的总数目现在只是$O(K^2V^2)$，使其为一个紧凑的密度模型。如果我们做的是计算一个完全观测向量$\mathbf{x}_{1:T}$的概率。例如，我们可以使这个模型来的定义一个类条件密度，$p(\mathbf{x}\vert y=c)$，然后做一个生成分类器。但是，由于每个变量都依赖于前面的所有变量，因此该模型不适用于其他类型的预测任务。所以我们需要另一种方法。
 
-### 10.1.2 Conditional independence
+### 10.1.2 条件依赖(Conditional independence)
 
 有效地表示大型联合分布的关键是对条件独立性(**CI**)做出一些假设。回忆2.2.4中，当且仅当条件联合可以写为条件边缘的一个乘积时，给定$Z$，$X,Y$是条件独立的，记为$X\perp Y\vert Z$，也就是
 $$
@@ -32,7 +32,7 @@ p(\mathbf{x}_{1:V}) = p(x_1)\prod_{t=1}^V p(x_t\vert x_{t-1})       \tag{10.3}
 $$
 这个可以用状态的初始化分布$p(x_1=i)$，加上一个状态转移矩阵$p(x_t=j\vert x_{t-1}=i)$来描述。
 
-### 10.1.3 Graphical models
+### 10.1.3 图模型(Graphical models)
 
 尽管一阶Markov假设对于在1维序列上定义分布是很有用的，但是我们如何定义2维图像、3维音频或是任意变量集合上的分布呢？这就是图形模型的用武之地。
 
@@ -40,13 +40,16 @@ $$
 
 ![image](Figure10.1.png)
 
-### 10.1.4 Graph terminology
+### 10.1.4 图术语(Graph terminology)
 
 继续之前，我们需要定义一些基本的术语。
 
-一个图$G=\{\mathcal{V, E}\}$由nodes或是vertices的集合$\mathcal{V}=\{1, \cdots, V\}$，以及一个边的集合$\mathcal{E}=\{(s, t):s, t, \in\mathcal{V}\}$组成。我们可以用它的邻接矩阵来表示图，其中我们用$G(s,t)=1$来代表$(s,t)\in\mathcal{E}$，也就是如果边$s\rightarrow t$位于图中。如果当且仅当$G(s, t)=1$时$G(t,s)=1$，我们说图是无向的，要不然是有向的。
+一个图$G=\{\mathcal{V, E}\}$由nodes或是vertices的集合$\mathcal{V}=\{1, \cdots, V\}$，以及一个边的集合$\mathcal{E}=\{(s, t):s, t, \in\mathcal{V}\}$组成。我们可以用它的邻接矩阵来表示图，其中我们用$G(s,t)=1$来代表$(s,t)\in\mathcal{E}$，也就是如果边$s\rightarrow t$位于图中。如果当且仅当$G(s, t)=1$时$G(t,s)=1$，我们说图是无向的，要不然是有向的。我们通常假设$G(s,s)=0$，代表此处没有自环。
 
-### 10.1.5 Directed graphical models
+下面是我们将要使用的一些术语:
+- **Parent** 对于一个有向图，结点的父母是指反馈至其的所有结点集合:$\text{pa}(s)\triangleq \{t:G(t,s)=1\}$
+
+### 10.1.5 有向图模型(Directed graphical models)
 
 一个**有向图或DGM**，是一个图为一个DAG的GM。这些更常用的名字是**贝叶斯网络(Bayesian networks)**。但是，贝叶斯网络本质上没有“贝叶斯”：它们只是定义概率分布的一种方式。这些模型称为**信念网络(belief network)**。术语"belief"指主观信念。再一次，关于DGM代表的概率分布的种类没有内在的主观性。最后，这些模型有时称为**因果网络(casual network)**，因为有向箭头有时被解释为代表因果关系。但是，DGM没有内在的因果关系。(关于因果关系的DGM的讨论，请参见第26.6.1节。)由于这些原因，我们使用较为中性(但不太迷人)的DGM术语。
 
@@ -74,7 +77,7 @@ $$
 
 ## 10.2 Examples
 
-### 10.2.1 Naive Bayes classifiers
+### 10.2.1 朴素贝叶斯分类器(Naive Bayes classifiers)
 
 在3.5节中，我们介绍了朴素贝叶斯分类器。假设给定类标签特征是条件独立的。这个解释在图10.2(a)中给出了解释。这允许我们将联合分布写为如下形式：
 $$
@@ -83,18 +86,18 @@ $$
 朴素贝叶斯假设过去朴素，因为其假设特征是条件独立的。捕获特征之间相似性的一种方法是使用一个图模型。尤其，如果模型时一棵树，方法称为一个**tree-augmented naive Bayes classifier**模型。在图10.2(b)中进行了解释。使用树的理由与使用一个泛型图的理由相反，因为其是two-fold。首先，使用Chow-Liu算法是很容易找到 最优树结构的，在26.3节中会解释。其次，很容易处理一个树结构模型中的缺失特征，在20.2节中进行了解释。
 
 ### 10.2.2 Markov and hidden Markov models
-
-图10.3(a)中将一个一阶马尔科夫模型解释一个DAG。当然，假设历史$x_{t-1}$捕获了我们知道的关于整个历史的所有信息，$\mathbf{x}_{1:t-2}$是有点过于强的假设。我们可以稍微放松一下，添加有点从$x_{t-2}$到$x_{t}$的依赖；这称为二阶马尔科夫链，在图10.3(b)中有所解释。对于的联合分布为如下
+![image](Figure10.3.png)
+图10.3(a)中将一个一阶马尔科夫模型解释一个DAG。当然，假设历史$x_{t-1}$捕获了我们知道的关于整个历史的所有信息$\mathbf{x}_{1:t-2}$，这个假设是过于强的假设。我们可以稍微放松一下，添加有点从$x_{t-2}$到$x_{t}$的依赖；这称为二阶马尔科夫链，在图10.3(b)中有所解释。对于的联合分布为如下
 $$
 p(\mathbf{x}_{1:T}) = p(x_1, x_2)p(x_3\vert x_1, x_2)p(x_4\vert x_2, x_3) \cdots = p(x_1, x_2)\prod_{t=3}^T p(x_t\vert x_{t-1}, x_{t-2})        \tag{10.9}
 $$
 我们可以以类似的方式创建一个高阶马尔科夫模型。在17.2节中有关于Markov模型的详细讨论。
 
-不幸的是，如果观测值之间有足够长的依赖，即使二阶马尔科夫假设也是不够的。我们无法构建更高阶的模型了，因为参数的数量会爆炸。另一个方法是假设有一个潜在的隐过程，可以被建模为一个一阶马尔科夫模型，但是数据是过程的噪声观测。这个结果称为一个**隐马尔科夫模型/HMM**，在图10.4中进行了解释。这里$z_t$称为一个在时刻$t$的一个**隐变量**，$x_t$是观测变量。(我们将“时间”用引号引起来，因为这些模型可以应用于任何种类的序列数据，例如基因组学或语言，其中t代表位置而不是时间)CPD $p(z_t\vert z_{t-1})$是转移模型，CPD $p(\mathbf{x}_t\vert z_t)$是观测模型。
-
+不幸的是，如果观测值之间有足够长的依赖，即使二阶马尔科夫假设也是不够的。我们无法构建更高阶的模型了，因为参数的数量会爆炸。**另一个方法是假设有一个潜在的隐过程**，可以被建模为一个一阶马尔科夫链，但是数据是该过程的噪声观测。这个结果称为一个**隐马尔科夫模型/HMM(hidden markov model)**，在图10.4中进行了解释。这里$z_t$称为一个在"时刻"$t$的**隐变量**，$x_t$是观测变量。(我们将"时间"用引号引起来，因为这些模型可以应用于任何种类的**序列数(sequential data)**，例如基因组学或语言，其中$t$代表位置而不是时间)。$\text{CPD}-p(z_t\vert z_{t-1})$是**转移模型/transition model**，CPD $p(\mathbf{x}_t\vert z_t)$是**观测模型/observation model**。
+![image](Figure10.4.png)
 <!-- $h_0$ | $h_1$ | $h_2$  -->
 
-隐变量通常表示感兴趣的量，例如某人当前正在说的单词的标识。观测变量时可测量的，例如声波波形。我们期望做的是估计给定数据的隐状态，也就是计算$p(z_t\vert\mathbf{x}_{1:t}, \boldsymbol{\theta})$。称为状态估计，是另一种形式的概率推断。
+隐变量通常表示感兴趣的量，例如某人当前正在说的单词的标识。观测变量时可测量的，例如声波波形。我们期望做的是估计给定数据的隐状态，也就是计算$p(z_t\vert\mathbf{x}_{1:t}, \boldsymbol{\theta})$。称为**状态估计/state estimation**，是另一种形式的**概率推断/probabilistic inference**。
 
 ### 10.2.3 Medical diagnosis
 
@@ -102,17 +105,17 @@ $$
 
 考虑一个DGM，其中所有的变量时实值的，所有的PCDs有如下形式：
 $$
-p(x_t\vert \mathbf{x}_{\text{pa}(t)}) = \mathcal{N}(x_t\vert \mu_t + \mathbf{x}_t^T \mathbf{x}_{\text{pa}(t)}, \sigma^2_t)  \tag{10.14}
+p(x_t\vert \mathbf{x}_{\text{pa}(t)}) = \mathcal{N}(x_t\vert \mu_t + \mathbf{w}_t^T \mathbf{x}_{\text{pa}(t)}, \sigma^2_t)  \tag{10.14}
 $$
-这个称为一个**线性高斯**CPD。正如我们如下显示的，将所有这样的CPDs相乘得到的是一个很大的联合高斯分布，形式为$p(\mathbf{x})=\mathcal{N}(\mathbf{x}\vert \boldsymbol{\mu}, \mathbf{\Sigma})$，称为一个有向GGM，或是一个高斯贝叶斯网络。
+这个称为一个**线性高斯**CPD。正如我们如下显示的，将所有这样的CPDs相乘得到的是一个很大的联合高斯分布，形式为$p(\mathbf{x})=\mathcal{N}(\mathbf{x}\vert \boldsymbol{\mu}, \mathbf{\Sigma})$，称为一个有向GGM，或是一个**高斯贝叶斯网络/Gaussian Bayes net**。
 
-我们现在解释如何从CPD参数推导$\boldsymbol{\mu}$与$\mathbf{\Sigma}$。出于方便，我们将重写CPDs重写为如下形式：
+我们现在解释如何从CPD参数推导出$\boldsymbol{\mu}$与$\mathbf{\Sigma}$。出于方便，我们将重写CPDs重写为如下形式：
 $$
-x_t = \mu_t + \sum_{s\in\text{pa}(t)} w_{ts}(x_s-\mu_s) + \sigma_t z_t
+x_t = \mu_t + \sum_{s\in\text{pa}(t)} w_{ts}(x_s-\mu_s) + \sigma_t z_t  \tag{10.15}
 $$
 其中$z_t\sim \mathcal{N}(0, 1)$，$\sigma_t$是给定其父母后$x_t$的条件标准差，$w_{ts}$是$s\rightarrow t$边的强度，$\mu_t$是局部均值。
 
-很容易看到全局均值是局部均值$\boldsymbol{\mu}=(\mu_1, \cdots, \mu_D)$的concatentation。我现在推导全局协方差$\mathbf{\Sigma}$。令$\mathbf{\Sigma}\triangleq\text{diag}(\boldsymbol{\sigma)}$是一个包含标准差的对角阵。我们将方程10.15重写为矩阵向量的形式：
+很容易看到全局均值是局部均值$\boldsymbol{\mu}=(\mu_1, \cdots, \mu_D)$的串联(concatentation)。我现在推导全局协方差$\mathbf{\Sigma}$。令$\mathbf{\Sigma}\triangleq\text{diag}(\boldsymbol{\sigma)}$是一个包含标准差的对角阵。我们将方程10.15重写为矩阵向量的形式：
 $$
 \mathbf{x}-\boldsymbol{\mu} = \mathbf{W}(\mathbf{x}-\boldsymbol{\mu})+\mathbf{Sz}   \tag{10.16}
 $$
@@ -125,7 +128,7 @@ $$
 \mathbf{e} = \mathbf{(I-W)}(\mathbf{x}-\boldsymbol{\mu})    \tag{10.18}
 $$
 
-因为$\mathbf{W}$是一个下三角阵(因为如果$t>s$有$w_{ts}=0$)，我们有$\mathbf{I-W}$是下三角阵，对角线上全是1。因此
+因为$\mathbf{W}$是一个下三角阵(因为在拓扑排序中，如果$t>s$有$w_{ts}=0$)，我们有$\mathbf{I-W}$是下三角阵，对角线上全是1。因此
 $$
 \begin{pmatrix}
     e_1 \\
@@ -157,7 +160,7 @@ $$
 \end{aligned}
 $$
 
-## 10.3 Inference
+## 10.3 推理(Inference)
 
 图模型提供了一种紧凑的方式来定义联合概率分布。给定一个联合分布，我们可以做什么呢？对于这样一个联合分布主要使用是执行**概率推断**。这个称为从已知量来估计未知量的任务。例如，在10.2.2节，我们介绍了HMMs，目标之一是从观测(如语音信号)来估计隐状态(也就是单词)。在第10.2.4节中，我们讨论了遗传连锁分析，并说目标之一是估计与不同的致病基因位置假设有关的各种DAG下数据的似然。
 
