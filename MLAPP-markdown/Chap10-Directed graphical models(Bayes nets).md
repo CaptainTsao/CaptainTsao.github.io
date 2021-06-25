@@ -206,3 +206,18 @@ DGM表示了第5章中考虑的模型的条件独立假设(CI assumptions)。
 
 ### 10.4.2 完全数据的学习(Learning from complete data)
 
+如果所有的变量都是完全可观测的，没有缺失数据，没有隐变量，我们说数据是完全的。对于一个有完全数据的DGM，似然给定为
+$$
+p(\mathcal{D}\vert \boldsymbol{\theta}) = \prod_{i=1}^N p(\mathbf{x}_i\vert \boldsymbol{\theta}) = \prod_{i=1}^N \prod_{t=1}^V p(x_{it}\vert\mathbf{x}_{i,\text{pa}(t)}, \boldsymbol{\theta}_t) = \prod_{t=1}^V p(\mathcal{D}_t \vert \boldsymbol{\theta}_t)
+\tag{10.27}
+$$
+其中$\mathcal{D}_t$是与结点$t$相关的数据及其父母，也就是第$t$个族。这是一个乘积项，每个CPD一个。我们说似然根据图结构**分解/decomposes**。
+
+我们假设先验分解为
+$$
+p(\boldsymbol{\theta}) = \prod_{t=1}^V p(\boldsymbol{\theta})_t     \tag{10.28}
+$$
+然后，很明显，后验可以分解为
+$$
+
+$$
