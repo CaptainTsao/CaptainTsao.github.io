@@ -232,4 +232,4 @@ $$
 
 10.5 Conditional independence properties of DGMs
 
-任何图模型中的
+任何图模型中的核心是条件独立(CI)假设的集合。图G中给定C后如果A独立于B，我们写作$\mathbf{x}_A\perp_G \mathbf{x}_B\vert \mathbf{x}_C$
