@@ -219,5 +219,11 @@ p(\boldsymbol{\theta}) = \prod_{t=1}^V p(\boldsymbol{\theta})_t     \tag{10.28}
 $$
 然后，很明显，后验可以分解为
 $$
-
+p(\boldsymbol{\theta}\vert\mathcal{D}) \propto p(\mathcal{D}\vert \boldsymbol{\theta}) p(\boldsymbol{\theta}) = \prod_{t=1}^V p(\mathcal{D}_t\vert \boldsymbol{\theta}_t) p(\boldsymbol{\theta}_t)  \tag{10.29}
 $$
+这意味着我们为每个CPD独立计算后验。换而言之
+> 因子先验加因子似然意味着因子后验 
+
+考虑一个例子，其中所有的CPD都是表格，那么扩展之前3.5.1.2中的结果，其中讨论了朴素贝叶斯。
+
+10.4.3 Learning with missing and/or latent variables
