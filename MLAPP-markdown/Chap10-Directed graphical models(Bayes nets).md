@@ -227,3 +227,9 @@ $$
 考虑一个例子，其中所有的CPD都是表格，那么扩展之前3.5.1.2中的结果，其中讨论了朴素贝叶斯。
 
 10.4.3 Learning with missing and/or latent variables
+
+如果我们有隐变量或是缺失值，似然不再是可以分解的，也不再是凸的。这意味着我们通常只可以计算一个局部最优ML或MAP估计。参数的贝叶斯推理也将会变得更加困难。我们在随后的章节中讨论恰当的近似推理技术。
+
+10.5 Conditional independence properties of DGMs
+
+任何图模型中的
