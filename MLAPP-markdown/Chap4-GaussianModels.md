@@ -601,4 +601,15 @@ $$
 \end{aligned}
 $$
 
-## 4.5 Digression: The Wishart distribution *
+## 4.5 题外话: Wishart分布(Digression: The Wishart distribution *)
+
+**Wishart**分布是对gamma分布针对正定矩阵的一个泛化。Press说了，"在多元统计中重要性与有用性的排序中Wishart分布仅次于高斯分布"。我们将主要使用它来模拟协方差矩阵$\mathbf{\Sigma}$或其逆$\mathbf{\Lambda}= \mathbf{\Sigma}^{-1}$中的不确定性。
+
+Wishart的pdf的定义如下
+$$
+\text{Wi}(\mathbf{\Lambda}\vert \mathbf{S}, \nu) = \frac{1}{Z_{\text{Wi}}}\vert \mathbf{\Lambda}\vert ^{(\nu - D - 1)/2} \exp \left(-\frac{1}{2}\text{tr}(\mathbf{\Lambda S}^{-1})    \right)
+$$
+这里$\nu$称为"自由度"，$\mathbf{S}$是"缩放矩阵"。分布的归一化常数是如下的复杂的表达式
+$$
+Z_{\text{Wi}} = 2^{\nu D/2}\Tau_D(\nu/2)\vert \mathbf{S}\vert ^{\nu/2}  \tag{4.160}
+$$
