@@ -8,7 +8,7 @@
 
 假设我们观测了多个相关变量，类似文本中的单词，图像中的像素，或是微数列中的基因。那我们怎么样可以紧凑的展示联合分布$p(\mathbf{x}\vert\boldsymbol{\theta})$呢？我们如何利用这个分布在合理的计算时间内推断出一组给定的变量？以及我们应该如何以一个合理数量的数据来学习分布的参数呢？这些问题是概率性建模、推理以及学习的核心，并组成了本章的核心。
 
-## 10.1.1 Chain rule(链式规则)
+## 10.1.1 链式规则(Chain rule)
 
 通过概率的chain rule，我们总是可以将联合概率表示为如下，使用变量的任意顺序：
 $$
@@ -85,7 +85,7 @@ p(y\vert\mathbf{x}) = p(y)\prod_{j=1}^{D}p(x_i\vert y)  \tag{10.8}
 $$
 朴素贝叶斯假设过去朴素，因为其假设特征是条件独立的。捕获特征之间相似性的一种方法是使用一个图模型。尤其，如果模型时一棵树，方法称为一个**tree-augmented naive Bayes classifier**模型。在图10.2(b)中进行了解释。使用树的理由与使用一个泛型图的理由相反，因为其是two-fold。首先，使用Chow-Liu算法是很容易找到 最优树结构的，在26.3节中会解释。其次，很容易处理一个树结构模型中的缺失特征，在20.2节中进行了解释。
 
-### 10.2.2 Markov and hidden Markov models
+### 10.2.2 马尔科夫与隐马尔科夫模型(Markov and hidden Markov models)
 ![image](Figure10.3.png)
 图10.3(a)中将一个一阶马尔科夫模型解释一个DAG。当然，假设历史$x_{t-1}$捕获了我们知道的关于整个历史的所有信息$\mathbf{x}_{1:t-2}$，这个假设是过于强的假设。我们可以稍微放松一下，添加有点从$x_{t-2}$到$x_{t}$的依赖；这称为二阶马尔科夫链，在图10.3(b)中有所解释。对于的联合分布为如下
 $$
@@ -101,7 +101,7 @@ $$
 
 ### 10.2.3 Medical diagnosis
 
-### 10.2.5 Directed Gaussian graphical models *
+### 10.2.5 有向高斯图模型(Directed Gaussian graphical models *)
 
 考虑一个DGM，其中所有的变量时实值的，所有的PCDs有如下形式：
 $$
@@ -188,7 +188,7 @@ $$
 
 在这种观点中，隐藏变量和参数之间的主要区别在于，隐藏变量的数量随着训练数据量的增加而增加(因为每个观察到的数据情况通常有一组隐藏变量)，而参数的数量通常是固定的(至少在参数模型中)。这意味着我们必须整合出隐藏的变量，以避免过拟合，但我们可以摆脱参数的点估计技术，这是数量较少。
 
-### 10.4.1 Plate notation
+### 10.4.1 碟符号(Plate notation)
 ![image](Figure10.7.png)
 > 左边: 给定$\theta$，数据点$x_i$是条件独立。右边: Plate符号。该图展示了与左边完全相同的模型，不同的是重复结点$x_i$在一个箱内，称为一个plate；右下角的数目$N$指定了$X_i$结点重复次数。
 
@@ -221,3 +221,60 @@ $$
 $$
 
 $$
+
+### 10.5.1 d-separation and the Bayes Ball algorithm (global Markov properties)
+
+首先，我们介绍一些定义。当且仅当至少满足以下一个条件时，我们说无向路径$P$是被一系列结点$E$**d-分割**:
+1. $P$包含一个链，$s\rightarrow m\rightarrow t$或是$s\leftarrow m\leftarrow t$，其中$m\in E$。
+2. $P$包含一个tent或是分叉，$s\swarrow^m\searrow t$，其中$m\in E$。
+3. $P$包含一个collider或**v-结构**
+
+当且仅当来自每个结点$a\in A$到每个结点$b\in B$的无向路径被$E$d-分割时，我们说给定第三观测点集$E$结点$A$的集合被另一个点集$B$d-分割。最后，我们定义一个DAG的CI性质：
+$$
+\mathbf{x}_A \perp_G \mathbf{x}_B \vert \mathbf{x}_E \Leftrightarrow \text{A is d-seperated from B given E} \tag{10.34}
+$$
+**贝叶斯球算法(Bayes ball alogorithm)** 是在给定$E$后查看$A$是否被$B$所d-分割的一种简单方式。想法是这样的。我们对$E$中的所有节点进行“着色”，表示它们被观察到。然后我们把“球”放在$A$中的每个节点上，让它们根据一些规则“反弹”，然后询问是否有球到达B中的任何节点。三个主要规则如图10.9所示。请注意，球可以沿与边方向相反的方向移动。我们看到一个球可以通过一个链条，但是如果它在中间是阴暗的。同样，一个球可以通过一个叉子，但如果不是在中间遮蔽。然而，除非中间有阴影，否则球不能通过V形结构。
+
+我们可以如下证明贝叶斯球的3条规则。首先，考虑一个链结构$X\rightarrow Y\rightarrow Z$，其编码
+$$
+p(x, y, z) = p(x)p(y\vert x)p(z\vert y) \tag{10.35}
+$$
+当我们以$y$为条件时，$x,z$独立吗？我们有
+$$
+p(x,z\vert y) = \frac{p(x)p(y\vert x)p(z\vert y)}{p(y)} = 
+\frac{p(x,y)p(z\vert y)}{p(y)} = p(x\vert y)p(z\vert y) \tag{10.36}
+$$
+因此$x\perp y\vert y$。所以看到链中间的结点将链分割为两段。
+
+现在考虑一个帐篷结构$X\leftarrow Y\rightarrow Z$，联合是
+$$
+p(x, y, z) = p(y)p(x\vert y)p(z\vert y) \tag{10.37}
+$$
+当我们以$y$为条件时，$x,z$是独立的吗？我们有
+$$
+p(x,z\vert y) = \frac{p(x, y, z)}{p(y)} = \frac{p(y)p(x\vert y)p(z\vert y)}{p(y)} = p(x\vert y)p(z\vert y) \tag{10.38}
+$$
+因此$x\perp z\vert y$。所以观测到一个根节点分割了其子点。
+
+最终，考虑一个v-结构$X\rightarrow Y \leftarrow Z$，联合是
+$$
+p(x, y, z) = p(x)p(z)p(y\vert x, z) \tag{10.39}
+$$
+当我们以$y$为条件时，$x$与$z$是独立的？
+我们有
+$$
+p(x,z\vert y) = \frac{p(x)p(z)p(y\vert x, z)}{p(y)} \tag{10.40}
+$$
+所以$x\not \perp z\vert y$。然而，在未条件分布中，我们有
+$$
+p(x, z) = p(x)p(z)  \tag{10.41}
+$$
+所以我们看到$x,z$是边缘独立的。
+
+## 10.6 影响(决策)图(Influence (decision) diagrams *)
+
+我们可以用一种被称为**决策图**或**影响图**的图形符号来表示多阶段(贝叶斯)决策问题(Howard&Matheson 1981; Kjaerulff&Madsen 2008)。这通过添加**决策节点/decision nodes**(也称为**动作节点/action nodes**)(用矩形表示)和**效用节点/utility nodes**(也称为**值节点/value nodes**)(用菱形表示)来扩展有向图形模型。原始随机变量称为**机会节点/chance nodes**，通常用椭圆表示。
+![image](Figure10.12.png)
+> (a)基本的oil wild catter问题的影响图。(b)有一个从sound机会结点到Drill决策结点的信息弧的扩展。(c)我们决定是否执行测试的扩展。
+
+图12.(a)中给出了一个简单的例子，解释了著名的**oil wild-catter问题**。在这个问题上，你必须决定是否钻油井。你有两种可能的行为: d=1意味着drill，d=0意味着不需要。你假设3种自然状态：
