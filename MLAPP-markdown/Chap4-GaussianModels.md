@@ -681,3 +681,13 @@ $$
 \hat{\mathbf{\Sigma}}_{\text{map}} = \frac{\mathbf{S}_N}{\nu_N + D + 1} = \frac{\mathbf{S}_N + \mathbf{S}_{\nu}}{N_0 +N}    \tag{4.182}
 $$
 如果我们使用一个不恰当的先验，对应的是$N_0 = 0, \mathbf{S}_0 = 0$，我们回到MLE。
+
+### 4.6.3 Posterior distribution of $μ$ and $Σ$*
+
+我们现在讨论如何计算$p(\boldsymbol{\mu}, \mathbf{\Sigma}\vert \mathcal{D})$。这个结果有点复杂。
+
+#### 4.6.3.1 Likelihood
+似然给定为
+$$
+p(\mathcal{D}\vert \boldsymbol{\mu},\mathbf{\Sigma}) = (2\pi)^{-DN/2} \lvert\Sigma\vert^{-\frac{N}{2}} \exp\left(-\frac{1}{2}\sum_{i=1}^N (\mathbf{x}_i - \boldsymbol{\mu})^{\top} \mathbf{\Sigma}^{-1} (\mathbf{x}_i - \boldsymbol{\mu}) \right)   \tag{4.194}
+$$
