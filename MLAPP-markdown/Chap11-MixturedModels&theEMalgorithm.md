@@ -52,35 +52,42 @@ p(\mathbf{x}_i|z_i=k,\boldsymbol{\theta}) =\prod_{j=1}^{D} \text{Ber}(x_{ij}|\mu
 $$
 其中$\mu_{jk}$是位$j$在聚类$k$上开启的概率。
 
-隐变量没有任何意义，我们会简单的引入潜在变量以使模型功能更强。例如，可以证明混合模型的均值与方差给定为
+隐变量没有任何意义，为了使模型功能更强，我们会简单的引入隐变量。例如，可以证明混合模型的均值与方差给定为
 $$
 \begin{aligned}
     \mathbb{E}[\mathbf{x}] &= \sum_k\pi_k\boldsymbol{\mu}_k \\
     \text{cov}[\mathbf{x}] &=\sum_{k}\pi_{k}[\mathbf{\Sigma}_k + \boldsymbol{\mu}_k\boldsymbol{\mu}_k^T]-\mathbb{E}[\mathbf{x}]\mathbb{E}[\mathbf{x}]^T
 \end{aligned}     \tag{11.4-11.5}
 $$
-其中$\mathbf{\Sigma}_k=\text{diag}(\mu_{jk}(1-\mu_{jk}))$。尽管成分分布是被因子化的，但联合分布不是。那么混合分布可以捕获变量之间的相关性，不像单个伯努利积模型(a single product-of-Bernoullis model)。
+其中$\mathbf{\Sigma}_k=\text{diag}(\mu_{jk}(1-\mu_{jk}))$。所以尽管成分分布是被因子分解的，但联合分布不是。那么**混合分布可以捕获变量之间的相关性**，不像单个伯努利积模型(a single product-of-Bernoullis model)。
 
 ### 11.2.3 使用混合模型进行聚类(Using mixture models for clustering)
 
-混合模型主要有两个应用。第一个是将其作为**黑盒密度模型(black-box density model)**$p(\mathbf{x}_i)$。这个模型对于很多工作都是非常有用的，例如数据压缩，异常值检测，创建生成分类器，其中我们通过一个混合密度建模每个类条件密度$p(\mathbf{x}|y=c)$。
+混合模型主要有两个应用。第一个是将其作为**黑盒密度模型(black-box density model)**$，p(\mathbf{x}_i)$。这个模型对于很多任务都是非常有用的，例如**数据压缩(data compression)，异常值检测(outlier detecttion)，创建生成分类器(creating generative classifiers)**，其中我们通过一个混合密度建模每个类条件密度$p(\mathbf{x}|y=c)$。
 
-混合模型的第二个且更常用的应用是将其用于聚类。我们将在第25章中讨论这个话题，但是基本思想很简单。我们首先拟合混合模型，然后计算$p(z_i=k|\mathbf{x}_i,\boldsymbol{\theta})$，这代表了点$i$属于聚类$k$的后验概率。这称为点$i$对聚类$k$的**责任**(responsibility)，可以使用**贝叶斯准则(Bayes rule)**来计算
+混合模型的第二个且更常用的应用是将其用于**聚类**。我们将在第25章中讨论这个话题，但是基本思想很简单。我们首先拟合混合模型，然后计算$p(z_i=k|\mathbf{x}_i,\boldsymbol{\theta})$，这代表了点$i$属于聚类$k$的后验概率。这称为聚类$k$对点$i$的**责任(responsibility)**，可以使用**贝叶斯准则(Bayes rule)** 来计算
 $$
 r_{ik}\triangleq p(z_i=k|\mathbf{x}_i,\boldsymbol{\theta})=\frac{p(z_i=k|\boldsymbol{\theta})p(\mathbf{x}_i|z_i=k,\boldsymbol{\theta})}{\sum_{k^{\prime}=1}^{N}p(z_i=k^{\prime}|\boldsymbol{\theta})p(\mathbf{x}_i|z_i=k^{\prime},\boldsymbol{\theta})}
 \tag{11.6}
 $$
-这个过程是**软聚类**，与使用生成分类器时执行的计算相同。两种模型的差异仅在训练时出现:在混合情况中，我们永远观测不到$z_i$，然而一个生成分类器，我们是可以观测到$y_{i}$的(扮演了$z_i$的角色)。
+这个过程是 **软聚类/soft clustering**，与使用生成分类器时执行的计算相同。两种模型的差异仅在训练时出现:在混合情况中，我们永远观测不到$z_i$，然而一个生成分类器，我们是可以观测到$y_{i}$的(扮演了$z_i$的角色)。
 
 我们可以用$1-\max_k r_{ik}$代表聚类分配中的不确定量。假设这个很小，使用MAP估计来计算一个**硬聚类**是合理的，给定为
 $$
 z_i^*=\argmax_{k}r_{ik}=\argmax_{k}\log p(\mathbf{x}_i|z_i=k,\boldsymbol{\theta}) + \log p(\mathbf{z}_i=k|\boldsymbol{\theta}) \tag{11.7}
 $$
 ![image](Figure11.8.png)
-图1.8中解释了一个使用GMM的硬聚类，其中我们代表了人们身高体重的聚类。颜色代表硬赋予。注意到，所使用的标签(颜色)的标识无关紧要；我们可以自由的重命名所有的集群，而不会影响数据的分区；这称为标签切换。
+图1.8中解释了一个使用GMM的硬聚类，其中我们代表了人们身高体重的聚类。颜色代表硬赋予。注意到，所使用的标签(颜色)的标识无关紧要；我们可以自由的重命名所有的集群，而不会影响数据的分区；这称为**标签切换/label switching**。
 
 ![image](Figure11.4.png)
-另一个例子如图11.4。这里数据向量$\mathbf{x}_{i}\in\mathbb{R}^7$代表不同基因在不同时间点的层次。我们使用一个GMM来进行聚类。
+
+另一个例子如图11.4。这里数据向量$\mathbf{x}_{i}\in\mathbb{R}^7$代表不同基因在不同时间点的表达水平。我们使用一个GMM来进行聚类。我们看到几种不同类型的基因，例如那些表达水平随时间单调上升的以及那些表达水平随时间单调下降的，以及那些具有更复杂表达水平的基因。我们将序列聚类为16种。例如，我们可以用**原型/prototype**或**质心/centroid**来表示每个簇。如图11.4(b)所示。
+
+这里从之前聚类的问题看出，我们首先是给出了若干幅手写数字图片，希望系统最终能够使得0-9分为十类，但是从上图我们看出有很多误分类的情况，比如有有两个9被分到了不同的类别中，以及1和0也是一样的情况，所以这个聚类的效果并不是很好。产生这样的误分类的主要原因有如下几种：
+
+- 该模型非常简单，没有捕捉到数字的相关视觉特征。例如，每个像素都是独立处理的，没有形状或笔触的概念。
+- 因为手写字体有很多的书写习惯，所以可能我们需要更多的类别，K可能要很大，但是很大的K又不能将这些看上去有些区别但是实际是一个数字的字体分到一起，这样就达不到我们的目的，所以其实很难做。（这么看，这个方法做手写识别还是太不靠谱了）
+- 似然函数是非凸的，可能收敛不到全局最优解。
 
 ### 11.2.4 专家混合(Mixture of experts)
 ![image](Figure11.6.png)
