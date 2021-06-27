@@ -611,5 +611,83 @@ $$
 $$
 这里$\nu$称为"自由度"，$\mathbf{S}$是"缩放矩阵"。分布的归一化常数是如下的复杂的表达式
 $$
-Z_{\text{Wi}} = 2^{\nu D/2}\Tau_D(\nu/2)\vert \mathbf{S}\vert ^{\nu/2}  \tag{4.160}
+Z_{\text{Wi}} = 2^{\nu D/2}\Gamma_D(\nu/2)\vert \mathbf{S}\vert ^{\nu/2}  \tag{4.160}
+$$
+其中$\Gamma_D(a)$是多元gamma函数
+$$
+\Gamma_D(x) = \pi^{D(D-1)/4}\prod_{i=1}^D\Gamma(x+(1-i)/2)  \tag{4.161}
+$$
+因此$\Gamma_1(a)= \Gamma(a)$。
+
+在Wishart分布与高斯分布之间存在一些联系。尤其是，令$\mathbf{x}_i\sim\mathcal{N}(0,\mathbf{\Sigma})$。那么散射矩阵$\mathbf{S} = \sum_{i=1}^N\mathbf{x}_i\mathbf{x}_i^{\top}$有一个Wishart分布:$\mathbf{S}\sim\text{Wi}(\mathbf{\Sigma},1)$。因此$\mathbb{E})[\mathbf{S}] = N\mathbf{\Sigma}$。更一般的，可以证明$\text{Wi}(\mathbf{S}, \nu)$的均值与mode给定为
+$$
+\text{mean} = \nu\mathbf{S} , \text{mode} = (\nu-D-1)\mathbf{S}\tag{4.163}
+$$
+
+### 4.5.1 逆Wishart分布(Inverse Wishart distribution)
+
+如果$\lambda \sim \text{Ga}(a, b)$,那么$\frac{1}{\lambda} \sim \text{IG}(a, b)$。类似的，如果$\mathbf{\Sigma}^{-1}\sim \text{Wi}(\mathbf{S},\nu) $，那么$\mathbf{\Sigma}\sim \text{IW}(\mathbf{S}^{-1}, \nu + D + 1)$。
+
+## 4.6 推理MVN的参数(Inferring the parameters of an MVN)
+到目前为止，我们讨论的是在假设参数$\boldsymbol{\theta} = (\boldsymbol{\mu},\mathbf{\Sigma})$已知的情况下高斯模型中的推理。接下来我们讨论多元高斯分布的参数推断。我们假设一共观察到了$N$个完全观测的数据$\mathbf{x}_i\sim \mathcal{N}(\boldsymbol{\mu}, \mathbf{\Sigma})$，没有缺失数据。为了简化表示，我得出后验的三部分：首先，我们计算$p(\boldsymbol{\mu}\vert \mathcal{D}， \mathbf{\Sigma})$，然后计算$p(\mathbf{\Sigma}\vert\mathcal{D},\boldsymbol{\mu})$；最后计算联合$p(\boldsymbol{\mu},\mathbf{\Sigma}\vert\mathcal{D})$。
+
+### 4.6.1 Posterior distribution of $μ$
+
+我们已经讨论了如何为$\boldsymbol{\mu}$计算MLE;我们现在讨论如何计算其后验，这对于我们对其值的不确定性建模非常有用。
+
+似然形式为
+$$
+p(\mathcal{D}\vert \boldsymbol{\mu}) = \mathcal{N}(\bar{\mathbf{x}}\vert \boldsymbol{\mu} ,\frac{1}{N}\mathbf{\Sigma})  \tag{4.171}
+$$
+
+出于简化，我们使用一个共轭先验，这种情况下是高斯。尤其，如果$p(\boldsymbol{\mu})= \mathcal{N}(\boldsymbol{\mu} \vert \mathbf{m}_0, \mathbf{V}_0)$,我们可以基于4.2.2.2节中的结果得到$\boldsymbol{\mu}$的高斯后验。我们得到
+$$
+\begin{aligned}
+    p(\boldsymbol{\mu} \vert \mathcal{D}， \mathbf{\Sigma}) &= \mathcal{N}(\boldsymbol{\mu} \vert \mathbf{m}_N, \mathbf{V}_N) \\
+    \mathbf{V}_N^{-1} &= \mathbf{V}_0^{-1} + N\mathbf{\Sigma}^{-1} \\
+    \mathbf{m}_N &= \mathbf{V}_N(\mathbf{\Sigma}^{-1}(N\bar{\mathbf{x}}) + \mathbf{V}_0^{-1}\mathbf{m}_0)
+\end{aligned} \tag{4.172-4.174}
+$$
+这与基于噪声雷达“斑点”推断目标位置的过程完全相同，只是现在我们是基于噪声样本推断分布的平均值(对于贝叶斯来说，参数的不确定性和其他任何事物的不确定性之间没有区别。)
+
+我们可以通过设置$\mathbf{V}_0 = \infin \mathbf{I}$建模一个信息不足的先验。这种情况下，我们有$p(\boldsymbol{\mu}\vert \mathcal{D}, \mathbf{\Sigma}) = \mathcal{N}(\bar{\mathbf{x}}\vert \boldsymbol{\mu} ,\frac{1}{N}\mathbf{\Sigma})$，所以后验均值等于MLE。我们还看到后验方差下降为$1/N$，这是频率统计的标准结果。
+
+### 4.6.2 Posterior distribution of $\mathbf{Σ}$ *
+
+我们现在讨论如何计算$p(\mathbf{\Sigma}\vert\mathcal{D},\boldsymbol{\mu})$。似然的形式为
+$$
+p(\mathcal{D}\vert \boldsymbol{\mu}, \mathbf{\Sigma}) \propto \vert\mathbf{\Sigma}\vert^{-\frac{N}{2}} \exp\left( -\frac{1}{2}\text{tr}(\mathbf{S}_{\mu}\mathbf{\Sigma}^{-1})  \right)      \tag{4.175}
+$$
+对应的共轭先验称为逆Wishart分布。其pdf为
+$$
+\text{IW}(\mathbf{\Sigma}\vert\mathbf{S}_0^{-1}, \nu_0) \propto \vert\mathbf{\Sigma}\vert^{-\frac{\nu_0 + D + 1}{2}} \exp \left( -\frac{1}{2}\text{tr}(\mathbf{S}_{0}\mathbf{\Sigma}^{-1})  \right)      \tag{4.176}
+$$
+我们看到$\mathbf{S}_0^{-1}$扮演了先验发射矩阵的角色，$N_0\triangleq \nu_0 + D + 1$控制了先验的强度，因此扮演了类似采样大小$N$的角色。
+
+将似然和先验相乘，我们发现后验也是逆Wishart：
+$$
+\begin{aligned}
+    p(\mathbf{\Sigma}\vert \mathcal{D},\boldsymbol{\mu}) & \propto \vert \mathbf{\Sigma}\vert ^{-\frac{N}{2}} \exp \left( -\frac{1}{2}\text{tr}(\mathbf{S}_{\mu}\mathbf{\Sigma}^{-1}) \right)  \vert \mathbf{\Sigma}\vert ^{-(\nu_0 + D + 1)/2} \exp \left( -\frac{1}{2}\text{tr}(\mathbf{S}_{0}\mathbf{\Sigma}^{-1})  \right)  \\
+    &= \vert \mathbf{\Sigma}\vert ^{-(N + \nu_0 + D + 1)/2}  \exp \left( -\frac{1}{2}\text{tr}[(\mathbf{S}_{\mu} + \mathbf{S}_{0})\mathbf{\Sigma}^{-1}] \right)
+\end{aligned}
+$$
+
+#### 4.6.2.1 MAP estimation
+
+我们从方程4.7中看到，$\hat{\mathbf{\Sigma}}_{\text{mle}}$是一个秩为$\min(N,D)$的矩阵。如果$N<D$，这不是一个完全秩，因此不可逆。即使是$N>D$，$\hat{\mathbf{\Sigma}}$是病态的(意味着接近奇异)。
+
+为了求解这个问题，我们可以使用后验众数。可以证明MAP估计给定为
+$$
+\hat{\mathbf{\Sigma}}_{\text{map}} = \frac{\mathbf{S}_N}{\nu_N + D + 1} = \frac{\mathbf{S}_N + \mathbf{S}_{\nu}}{N_0 +N}    \tag{4.182}
+$$
+如果我们使用一个不恰当的先验，对应的是$N_0 = 0, \mathbf{S}_0 = 0$，我们回到MLE。
+
+### 4.6.3 Posterior distribution of $μ$ and $Σ$*
+
+我们现在讨论如何计算$p(\boldsymbol{\mu}, \mathbf{\Sigma}\vert \mathcal{D})$。这个结果有点复杂。
+
+#### 4.6.3.1 Likelihood
+似然给定为
+$$
+p(\mathcal{D}\vert \boldsymbol{\mu},\mathbf{\Sigma}) = (2\pi)^{-DN/2} \lvert\Sigma\vert^{-\frac{N}{2}} \exp\left(-\frac{1}{2}\sum_{i=1}^N (\mathbf{x}_i - \boldsymbol{\mu})^{\top} \mathbf{\Sigma}^{-1} (\mathbf{x}_i - \boldsymbol{\mu}) \right)   \tag{4.194}
 $$
