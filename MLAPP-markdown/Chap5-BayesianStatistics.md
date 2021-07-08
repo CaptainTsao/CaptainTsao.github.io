@@ -1,3 +1,5 @@
+[toc]
+
 # 5 Bayesian statistics
 
 ## 5.1 Introduction
@@ -25,11 +27,24 @@ MAP估计以及任何其他点估计(如后验平均值或中位数)最明显的
 
 如果mode不是一个好的选择，我们应该如何总结一个后验？答案是使用决策理论，我们将在第5.7节中讨论。基本思想是指定一个损失函数，其中$L(\theta, \hat{\theta})$是如果真实是$\theta$估计是$\hat{\theta}$时引起的损失。如果我们使用0-1损失，$L(\theta, \hat{\theta})=\mathbb{I}(\theta\not ={\hat{\theta}})$，那么最优估计是后验众数。0-1损失意味着如果你没有犯错你将得到一个点，要不然你什么都得不到。对于连续值量，我们更喜欢使用平方误差损失，$L(\theta,\hat{\theta})=(\theta-\hat{\theta})^2$；对应的最优估计器是后验均值。或是使用更加鲁棒的损失函数$L(\theta,\hat{\theta})=\vert \theta-\hat{\theta} \vert$，得到后验中位数。
 
-#### 5.2.1.4 MAP estimation is not invariant to reparameterization *
+#### 5.2.1.4 MAP 估计对于重新参数化不是一成不变的(MAP estimation is not invariant to reparameterization *)
 MAP估计一个更加微妙的问题是我们得到的结果依赖于我们如何参数化概率分布。如果从一个表示变化到另一个等效的表示会改变结果，这不是我们期望得到的，因为测量单元是任意的。
 
 为了理解这个问题，我们假设计算$x$的后验。如果我们定义$y=f(x)$，$y$的分布，
 $$
 p_y(y) = p_x(x) \lvert \frac{dx}{dy}    \rvert      \tag{5.1}
 $$
-$\lvert \frac{dx}{dy}    \rvert$项称为Jacobian，其测量了一个单位的体积通过$f$后尺寸的改变。令$\hat{x}=\argmax_x p_x(x)$是$x$的MAP估计。一般情况下，给定$f(\hat{x})$后并非$\hat{y}=\argmax_y p_y(y)$。我们看到原始的高斯分布通过sigmoid非线性后变成了"挤压"形状。尤其是转换分布的mode不再等于原始mode。
+$\lvert \frac{dx}{dy}    \rvert$项称为Jacobian，其测量了一个单位的体积通过$f$后尺寸的改变。令$\hat{x}=\argmax_x p_x(x)$是$x$的MAP估计。一般情况下，给定$f(\hat{x})$后并非$\hat{y}=\argmax_y p_y(y)$。例如，令$x\sim \mathcal{N}(6, 1)$且$y=f(x)$，其中
+$$
+f(x) = \frac{1}{1+\exp(-x + 5)} \tag{5.2}
+$$
+我们可以使用蒙特卡洛模拟来推演$y$的分布。结果在图5.2中有显示。我们看到原始的高斯分布通过sigmoid非线性后变成了"挤压"形状。尤其是转换分布的mode不再等于原始mode。
+
+要了解这个问题是如何在MAP估计的上下文中出现的，请考虑以下示例，由于Michael Jordan。伯努利分布是典型的由其均值$\mu$参数化的分布，$p(y=1\vert \mu)=\mu,y\in\{0,1\}$。假设我们在单位间隔$p_{\mu}(\mu)=1\mathbb{I}(0\leq \mu \leq 1)$上有一个均匀分布。如果没有数据，MAP估计只是先验的mode，可以是0到1之间的任何位置。我们现在将展示不同的参数化可以在这个区间内任意选择不同的点。
+
+首先，令$\theta = \sqrt{\mu}$所以$\mu=\delta^2$。新的先验是
+$$
+p_{\theta}(\theta) = p_{\mu}(\mu)\lvert \frac{d\mu}{d\theta}\rvert = 2\theta    \tag{5.3}
+$$
+
+5.3 Bayesian model selection
