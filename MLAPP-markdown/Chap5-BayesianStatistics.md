@@ -47,4 +47,132 @@ $$
 p_{\theta}(\theta) = p_{\mu}(\mu)\lvert \frac{d\mu}{d\theta}\rvert = 2\theta    \tag{5.3}
 $$
 
-5.3 Bayesian model selection
+## 5.3 Bayesian model selection
+在图1.18中，我们看到使用过高的阶数会导致过拟合，而使用过低的阶数会导致欠拟合。类似的，在图7.8(a)中，我们看到使用很小的一个正则化参数导致过拟合，使用一个很大的值导致欠拟合。一般来说，当面对一组不同复杂度的模型(即参数分布族)时，我们应该如何选择最好的模型? 这称为\textbf{模型选择(model selection)}问题。
+	
+一种方法是使用交叉验证来估计所有候选模型的泛型误差，然后挑选看起来最优的模型。然而，这需要针对每个模型拟合$K$次，其中$K$是CV折的数量。一个更有效的方法是计算模型的后验，
+$$
+p(m\vert\mathcal{D}) = \frac{p(\mathcal{D}\vert m)p(m)}{\sum_{m\in\mathcal{M}}p(m, \mathcal{D})}	\tag{5.12}
+$$
+从这点可以看出，我们可以轻易计算MAP模型，$\hat{m}=\arg\max p(m	| \mathcal{D})$。这称为\textbf{贝叶斯模型选择}。
+如果我们使用模型的一个均匀先验$p(m)\propto 1$，这等效于挑选一个最大化
+$$
+p(\mathcal{D}\vert m) = \int p(\mathcal{D}\vert \boldsymbol{\theta} )p(\boldsymbol{\theta}\vert m) d \boldsymbol{\theta} \tag{5.13}
+$$
+的模型。这个量称为**边缘似然(marginal likelihood)**，$\textbf{积分似然(integrated likelihood)}$或模型$m$的$\textbf{证据(evidence)}$。关于如何计算这个积分的细节在5.3.2%\fullref{(section5.3.2)}%
+节中详细描述。但首先我们对这个数量的含义给出一个直观的解释。
+
+### 5.3.2 Computing the marginal likelihood (evidence)}
+当为一个固定模型讨论参数推理时，我们通常写作
+$$
+p(\boldsymbol{\theta}\vert \mathcal{D}, m) \propto p(\boldsymbol{\theta}\vert \ m) p(\mathcal{D} \vert \boldsymbol{\theta}, m) 	\tag{5.15}
+$$
+然后忽略归一化常数$p(\mathcal{D}\vert m)$。因为$p(\mathcal{D}\vert m)$相对$\boldsymbol{\theta} $是常数，所以有效。然而，当对比模型时，我们需要知道如何计算边缘似然$p(\mathcal{D}\vert m)$。一般而言，这是很困难的，因为我们需要计算所有可能的参数值，但是当我们有一个共轭先验时，就很容易计算了。
+
+令$p(\boldsymbol{\theta})=q(\boldsymbol{\theta})/Z_0$是我们的先验，其中$q(\boldsymbol{\theta})$是未归一化的分布，且$Z_0$是先验的归一化常数。令$p(\mathcal{D} \vert \boldsymbol{\theta})= p(\mathcal{D} \vert \boldsymbol{\theta}) / Z_{\ell}$是似然，其中$ Z_{\ell}$是似然中包含的任何常量因子。最终，$p(\boldsymbol{\theta}\vert \mathcal{D}) = p(\boldsymbol{\theta}\vert \mathcal{D})/Z_N$是我们的后验，其中$	p(\boldsymbol{\theta}\vert \mathcal{D}) =  p(\boldsymbol{\theta}) p(\mathcal{D} \vert \boldsymbol{\theta}) $是未归一化的后验，$Z_N$是后验的归一化常数。我们有
+$$
+\begin{aligned}
+p(\boldsymbol{\theta}\vert \mathcal{D}) &= \frac{p(\mathcal{D} \vert \boldsymbol{\theta})p(\boldsymbol{\theta})}{p(\mathcal{D})}  \\
+\frac{q(\boldsymbol{\theta}\vert \mathcal{D}) }{Z_N} &= \frac{  p(\mathcal{D} \vert \boldsymbol{\theta})  p(\boldsymbol{\theta})   }{p(Z_{\ell} Z_0 \mathcal{D})} 		\\
+p(\mathcal{D}) &= \frac{Z_N}{Z_0 Z_{\ell}}	
+\end{aligned}\tag{5.18}
+$$
+因此，假设相关的归一化常数易于处理，我们就有了一种计算边际似然的简单方法。 我们在下面给出一些例子。
+
+#### 5.3.2.1 Beta-binomial model
+我们将上述结果应用到Beta-binomial模型中。因为我们知道$p(\theta\vert\mathcal{D})= \text{Beta} (\theta\vert a^{\prime}, b^{\prime}) $，其中$a^{\prime}=a+N_1, b^{\prime}=b+N_0$，我们知道后验的归一化常数为$B(a^{\prime}, b^{\prime}) $。因此
+$$
+\begin{aligned}
+    p(\boldsymbol{\theta}\vert \mathcal{D}) &= \frac{p(\mathcal{D} \vert \boldsymbol{\theta})p(\boldsymbol{\theta})}{p(\mathcal{D})}  \\
+&=\frac{1}{p(\mathcal{D})}\left[ \frac{1}{B(a, b)}	\theta^{a-1}(1-\theta)^{b-1}	\right] \left[  \begin{pmatrix}
+N \\ N_1
+\end{pmatrix} \theta^{N_1}(1-\theta)^{N_0}  \right] 	 \\
+&=\begin{pmatrix}
+N \\ N_1
+\end{pmatrix}   \frac{1}{p(\mathcal{D})} \frac{1}{B(a, b)} \left[  \theta^{a+N_1-1}(1-\theta)^{b+N_0-1}	\right]  
+\end{aligned}    \tag{5.21}
+$$
+所以
+$$
+\begin{aligned}
+    \frac{1}{B(a+N_1, b+N_0)} &= \begin{pmatrix} N \\ N_1 \end{pmatrix}  \frac{1}{p(\mathcal{D})}  \frac{1}{B(a, b)} \\
+p(\mathcal{D}) &=  \begin{pmatrix} N \\ N_1 \end{pmatrix} \frac{B(a+N_1, b+N_0)} {B(a, b)}
+\end{aligned}
+$$
+Beta-binomial模型的边缘似然与上述一样，除了丢弃了$ \begin{pmatrix} N \\ N_1 \end{pmatrix}$项。
+
+#### 5.3.2.2 Dirichlet-multinoulli model
+通过与Beta-binomial一样的推理，可以证明Dirichlet-multinoulli的边缘似然的给定为
+$$
+p(\mathcal{D}) = \frac{B(\mathbf{N}+\boldsymbol{\alpha})}{B(\boldsymbol{\alpha})}		\tag{5.24}
+$$
+其中
+$$
+B(\boldsymbol{\alpha})	= \frac{\prod_{k=1}^{K}\Gamma(\alpha_k)}{\Gamma(\sum_k\alpha_k)  }	\tag{5.24}
+$$
+
+#### 5.3.2.3 Gaussian-Gaussian-Wishart model}
+考虑一个共轭先验为$\text{NIW(Normal-inverse-wishart)}$的MVN情况。令$Z_0$是先验的归一化常数，$Z_N$是后验的归一化常数，且令$ Z_{\ell}=(2\pi)^{ND/2} $是似然的归一化常数。那么很容易看到
+$$
+\begin{aligned}
+    p(\mathcal{D}) &= \frac{Z_N}{Z_0 Z_{\ell}}	\\
+&= \frac{1}{(2\pi)^{ND/2} }\frac{(\frac{2\pi}{\kappa_N})^{D/2}\vert \mathbf{S}_N\vert^{-\nu_N/2}2^{(\nu_0+N)D/2}\Gamma_D(\nu_N/2)}{(\frac{2\pi}{\kappa_0})^{D/2}\vert \mathbf{S}_0\vert^{-\nu_0/2}2^{\nu_0D/2}\Gamma_D(\nu_0/2)}  		\\
+&=\frac{1}{(2\pi)^{ND/2} }\left(  \frac{\kappa_0}{\kappa_N} \right) ^{D/2} \frac{\vert \mathbf{S}_0\vert^{\nu_0/2}}{\vert \mathbf{S}_N\vert^{\nu_N/2}} \frac{\Gamma_D(\nu_N/2)}{\Gamma_D(\nu_0/2)} \tag{5.29}	
+\end{aligned}
+$$
+
+#### 5.3.2.4 BIC approximation to log marginal likelihood
+一般的，计算等式\ref{5.13}中的积分是非常困难的。一个简单的但是常用的近似称为$\textbf{贝叶斯信息准则(\text{Bayesian information criterion/BIC}})$。有如下形式
+$$
+\text{BIC} \triangleq \log p(\mathcal{D}\vert \hat{\theta}) - \frac{\text{dof}(\hat{\boldsymbol{\theta}})}{2}\log N \approx \log p(\mathcal{D})\tag{5.30}
+$$
+其中$ \text{dof}(\hat{\boldsymbol{\theta}}) $是模型中的自由度的数，$\hat{\boldsymbol{\theta}}$是模型的最大似然。我们看到这具有惩罚对数似然的形式，其中惩罚项取决于模型的复杂性。BIC 分数的推导见第8.4.2节。
+
+## 5.5 Hierarchical Bayes
+
+计算后验$ p(\boldsymbol{\theta}\vert\mathcal{D}) $的一个关键要求是指定一个先验$ p(\boldsymbol{\theta}\vert\boldsymbol{\eta}) $，其中$ \boldsymbol{\eta} $是超参。如果我们不知道如何设置$ \boldsymbol{\eta} $呢？在某些情况下，我们应该使用无信息先验。一个更加贝叶斯的方法是在我们的先验上面再添加一个先验！用图模型表示的化，我们将这种情况表示为如下
+$$
+\begin{align*}
+	\boldsymbol{\eta} \mapsto \boldsymbol{\theta} \mapsto	\mathcal{D}	\tag{5.76}
+\end{align*}
+$$
+这是$\textbf{阶层贝叶斯模型(hierarchical Bayesian model)}$的一个例子，也称为$\textbf{多层贝叶斯模型( multi-level model)}$，因为有多层的未知量。我们给定一个简单的例子，
+
+### 5.5.1 Example: modeling related cancer rates
+考虑预测各个城市中癌症比例的情况。尤其，假设我们测量了在各种城市$ N_i $，以及在各城市中思域癌症的数量$ x_i $。我们假设$ x_i\sim\text{Bin}(N_i, \theta_i) $，且我们想估计癌症比例$ \theta_i $。一个方法是单独估计它们，但是这会遇到稀疏数据问题。另一个方法是假设所有的$ \theta_i $是相同的；这称为\textbf{参数绑定(parameter tying)}。得到的似然只是$ \hat{\theta}=\frac{\sum_i x_i}{\sum_i N_i} $。但是假设所有的城市都有相同的比例是一个很强的假设。一个折中的办法是假设所有的$ \theta_i $都是相似的，但是可能根据城市会变化。这个可以通过假设$ \theta_i $服从一些常见分布，如$ \theta_i\sim \text{Beta}(a,b) $。完全联合分布可以写为
+$$
+\begin{align*}
+p(\mathcal{D} \vert \boldsymbol{\eta},\boldsymbol{\theta}, N) = p(\boldsymbol{\eta})\prod_{i=1}^N \text{Bin}(x_i\vert N_i,\theta_i)\text{Beta}(\theta_i\vert\boldsymbol{\eta})  \tag{5.77}
+\end{align*}
+$$
+
+
+## 5.6 Empirical Bayes
+在阶层贝叶斯模型中，我们需要计算隐变量在多层级的后验。例如，在二层模型中，我们需要计算
+$$
+p(\boldsymbol{\eta},\boldsymbol{\theta}\vert \mathcal{D}) \propto p(\mathcal{D}\vert \boldsymbol{\theta}) p(\boldsymbol{\theta} \vert \boldsymbol{\eta} )p(\boldsymbol{\eta})  \tag{5.78}
+$$
+在某些情况中，我们解析的边缘化$\boldsymbol{\theta}$；剩下的就是简单的计算$p(\boldsymbol{\eta} \vert\mathcal{D})$问题。
+
+作为计算的捷径，我们可以用点估计来逼近超参数的后验值，$p(\boldsymbol{\eta} \vert\mathcal{D})\approx \delta_{\hat{\boldsymbol{\eta}}}(\boldsymbol{\eta})$，其中$\hat{\boldsymbol{\eta}} = \argmax p(\boldsymbol{\eta\vert\mathcal{D}})$。因为$\boldsymbol{\eta}$在维度一般要比$\boldsymbol{\theta}$小很多，不易过拟合，所以我们可以安全的在$\boldsymbol{\eta}$上使用均匀分布。那么估计变为
+$$
+\hat{\boldsymbol{\eta}} = \argmax p(\mathcal{D}\vert\boldsymbol{\eta}) = \argmax \left[\int p(\mathcal{D}\vert \boldsymbol{\theta}) p(\boldsymbol{\theta} \vert \boldsymbol{\eta} )p(\boldsymbol{\eta}) \right]  \tag{5.79}
+$$
+括号内的数量是边缘或积分似然，有时称为**证据/evidence**。这种总体方法被称为经验贝叶斯(empirical Bayes/EB)或II型最大似然法。在机器学习中，它有时被称为**证据过程/evidence procedure**。
+
+经验贝叶斯违背了先验要独立于数据进行选择的原则。然而，我们可以将其视为在阶层贝叶斯模型中推理的一个低计算成本的近似；就如图将MAP估计看作在单层模型$\boldsymbol{\theta}\mapsto\mathcal{D}$中推理的一个简单近似。事实上，我们可以构建一个阶层，其中更多的积分执行一次，
+
+## 5.7 Bayesian decision theory(贝叶斯决策理论)
+
+我们现在看概率论如何用来表示并更新我们关于世界状态的信念。然而，最终我们的目标是将我们的信念转化为行为。本节中，我们讨论这种行为的最优方式。
+
+我们可以将任何给定的**统计决策问题形**式化为与自然的**博弈**(而不是与其他战略参与者的博弈，这是博弈论的主题，详见(Shoham和Leyton Brown 2009))。博弈中，自然挑选一个状态或是参数或是label，$y\in\mathcal{Y}$，这些对我们是未知的，然后产生一个观测$\mathbf{x}\in\mathcal{X}$，我们可以观测到的。我们然后必须做出一个决策，这就是我们必须从一些行为空间**action space**$\mathcal{A}$中选的一个行为$a$。最后我们蒙受了一些**损失**$L(y,a)$，这衡量了我们的行为a与自然界隐藏状态y的相容性。
+
+我们的目标是设计一个**决策过程**或是**策略**$\delta:\mathcal{X}\mapsto\mathcal{A}$，指定了对于每个可能输入的最优行为。通过最优，意味着行为最小化了期望损失：
+$$
+\delta(\mathbf{x}) = \argmax_{a\in\mathcal{A}} \mathbb{E}[L(y,a)]   \tag{5.96}
+$$
+在经济学中，最常用的是用**效用函数**；也就是负的损失$U(y,a)=-L(y,a)$。那么上述规则变为
+$$
+\delta(\mathbf{x}) = \argmin_{a\in\mathcal{A}} \mathbb{E}[U(y,a)]   \tag{5.97}
+$$
