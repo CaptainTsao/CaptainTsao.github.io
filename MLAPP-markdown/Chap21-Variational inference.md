@@ -415,4 +415,156 @@ $$
 
 ## 21.6 变分贝叶斯EM(Variational Bayes EM)
 
-现在考虑隐变量模型，形式为$\mathbf{z}_i\rightarrow\mathbf{x}_i\leftarrow\boldsymbol{\theta}$。包含了混合模型、PCA、HMM。主要有2类未知：参数$\boldsymbol{\theta}$以及隐变量$\mathbf{z}_i$。
+现在考虑形式为$\mathbf{z}_i\rightarrow\mathbf{x}_i\leftarrow\boldsymbol{\theta}$的隐变量模型。其中包含了\textbf{混合模型(mixture models)}、\textbf{PCA}、\textbf{HMMs}等。主要存在两类未知量：参数$\boldsymbol{\theta}$以及隐变量$\mathbf{z}_i$。正如我们在11.4节中看到的，通常使用EM算法来拟合这样的模型，其中E步我们推理隐变量的后验$p(\mathbf{z}_i \vert \mathbf{x}_i,\boldsymbol{\theta})$，在M步我们计算参数$\boldsymbol{\theta}$的点估计。有两个正当的理由。首先，其导致更加简单的算法。其次，$\boldsymbol{\theta}$的后验不确定性通常小于$\mathbf{z}_i$的不确定性，因为$\boldsymbol{\theta}$是由所有$N$个数据案例推理的，而$\mathbf{z}_i$是仅是由$\mathbf{x}_i$推理得到的；这使得关于$\boldsymbol{\theta}$的MAP估计比$\mathbf{z}_i$的MAP估计更加合理。
+
+然而，VB通过建模参数$\boldsymbol{\theta}$以及隐变量$\mathbf{z}_i$中的不确定性使其"更加贝叶斯化"，而计算成本本质上是与EM一样的。这个方法称为\textbf{变分贝叶斯EM(variational Bayes EM/VBEM)}。其基本思想是使用均值场，其中近似后验的形式是
+$$
+\begin{aligned}
+p(\boldsymbol{\theta},\mathbf{z}_{1:N}\vert \mathcal{D}) \approx q(\boldsymbol{\theta})q(\mathbf{z}) = q(\boldsymbol{\theta}) \prod_{i} q(\mathbf{z}_i)	\tag{21.120}
+\end{aligned}
+$$
+第一个分解，也就是$\boldsymbol{\theta}$与$\mathbf{z}$之间的分解对于算法的方便性是一个很关键的假设。第二个分解是跟随模型的，因为隐变量是关于$\boldsymbol{\theta}$
+
+在VBEM中，我们在更新$q(\mathbf{z}_i\vert \mathcal{D})$(变分E步)与更新$q(\boldsymbol{\theta}\vert \mathcal{D})$(变分M步)之间切换。通过使用delta函数逼近参数后验$q(\boldsymbol{\theta}\vert \mathcal{D})\approx \delta_{\hat{\boldsymbol{\theta}}}(\boldsymbol{\theta})$，我们可以从VBEM中恢复标准EM。
+
+变分E步类似于标准的E步，区别主要在于没有插入了参数的MAP估计而是计算了$q(\mathbf{z}_i\vert \mathcal{D}, \hat{\boldsymbol{\theta}})$，我们需要对参数进行平均。粗略地说，这可以通过插入参数的后验平均值而不是MAP估计值来计算，然后使用例如前向-反向这样的标准算法来计算$q(\mathbf{z}_i\vert \mathcal{D}, \bar{\boldsymbol{\theta}})$。不幸的是，往往事情没有这么简单，不过这是基本思想。细节依赖于模型的形式；我们下面给出一些例子。
+
+变分M步与标准M步类似，除了不计算参数的点估计外，我们使用期望的充分统计量更新超参数。此过程通常与常规EM中的MAP估计非常相似。同样，如何进行此操作的细节取决于模型的形式。
+
+与常规EM相比，VBEM的主要优势在于通过边缘参数，我们可以计算出边缘似然的下限，可以用于模型选择。我们将在第21.6.1.6节中看到一个例子。VBEM也是“平等主义者”，因为它将参数视为“一等公民”，就像任何其他未知量一样，而EM人为地区分参数和隐变量。
+
+<!-- \subsubsection{例子: 高斯混合的VBEM(Example: VBEM for mixtures of Gaussians *)} -->
+###  例子: 高斯混合的VBEM(Example: VBEM for mixtures of Gaussians *
+我们现在考虑如何使用VBEM来拟合高斯混合模型。(由于我们不是在估计模型参数，而是在推断模型参数的后验值，所以我们使用了恐慌性引用。)我们将沿用(Bishop 2006b, Sec 10.2)中的表示。不幸的是，细节相当复杂。幸运的是，与EM一样，经过一段时间的练习，人们会习惯它(和往常的数学一样，简单地阅读方程式并没有多大帮助，如果你想深入学习这些东西，你应该自己尝试得出这些结果(或者尝试一些练习)。
+
+<!-- \paragraph{变分后验(The variational posterior)} -->
+#### 变分后验(The variational posterior)
+似然函数是高斯混合模型的常用函数：
+$$
+\begin{align*}
+p(\mathbf{z, X}\vert \boldsymbol{\theta}) = \prod_i \prod_{k} \pi_{k}^{z_{ik}}\mathcal{N}(\mathbf{x}_i \vert \boldsymbol{\mu}, \boldsymbol{\Lambda}_k^{-1})^{z_{ik}} \tag{21.121}
+\end{align*}
+$$
+其中如果数据点$i$属于聚类$k$有$z_{ik}=1$，要不然$z_{ik}=0$。
+
+我们将假设如下的因子化的共轭先验，
+$$
+\begin{align*}
+p(\boldsymbol{\theta}) = \text{Dir}(\boldsymbol{\pi}\vert \boldsymbol{\alpha}_0) \prod_{k} \mathcal{N}(\boldsymbol{\mu}_k\vert \mathbf{m}_0, (\beta_0\boldsymbol{\Lambda}_k)^{-1})\text{Wi}(\boldsymbol{\Lambda}_k\vert \mathbf{L}_0, \nu_0)  \tag{21.122}
+\end{align*}
+$$
+其中$\boldsymbol{\Lambda}_k$是聚类$k$的精确矩阵。小脚标$0$意味着这些是先验的参数；我们假设所有聚类的先验参数是相同的。对于混合权重，我们通常使用一个对称先验$\boldsymbol{\alpha}_0 = \alpha_0\mathbf{1}$。
+
+精确后验$p(\mathbf{z},\boldsymbol{\theta}\vert \mathcal{D})$是$K^N$个分布的混合，对应于所有可能标签$\mathbf{z}$。我们将尝试近似围绕这些modes的体积。我们使用标准VB来近似后验
+$$
+\begin{align*}
+p(\boldsymbol{\theta}, \mathbf{z}_{1:N} \vert \mathcal{D}) \approx q(\boldsymbol{\theta}) \prod_{i} q(\mathbf{z}_i) \tag{21.123}
+\end{align*}
+$$
+此阶段，我们不会指定$q$函数的形式；这些将由似然与先验的形式决定。下面，我们将证明最优形式如下：
+$$
+\begin{align*}
+p(\mathbf{z}\vert \boldsymbol{\theta}) &= q(\mathbf{z}\vert \boldsymbol{\theta}) q(\boldsymbol{\theta}) = \left[ \prod_{i}\text{Cat}(\mathbf{z}_i \vert \mathbf{r}_i) \right]		 \\
+& \left[ \text{Dir}(\boldsymbol{\pi}\vert \boldsymbol{\alpha}) \prod_{k} \mathcal{N}(\boldsymbol{\mu}_k\vert \mathbf{m}_k, (\beta_k\boldsymbol{\Lambda}_k)^{-1})\text{Wi}(\boldsymbol{\Lambda}_k\vert \mathbf{L}_k, \nu_k) \right] 	\tag{21.125-21.124}
+\end{align*}
+$$
+(缺少下标$0$意味着这些是后验的参数，而不是先验。)下面，我们将推导出这些变分参数的更新方程。
+
+<!-- \paragraph{$q(z)$的推导(Derivation of $q(z)$(variational E step))} -->
+#### $q(z)$的推导(Derivation of $q(z)$(variational E step))
+$q(z)$的形式可以通过查看完整的数据对数联合获得，忽略不涉及$ \mathbf{z} $的术语，并对除了$ \mathbf{z} $以外的所有隐藏变量的剩余值进行预期。我们有
+$$
+\begin{align*}
+\log q(\mathbf{z}) &= \mathbb{E}_{q(\boldsymbol{\theta})} \left[ \log p(\mathbf{x}, \mathbf{z}, \boldsymbol{\theta}) \right]  + \text{const}	 \\
+	&= \sum_i \sum_i z_{ik} \log \rho_{ik}  + \text{const} \tag{21.126-21.127} 
+\end{align*}
+$$
+其中我们定义
+$$
+\begin{align*}
+\log \rho_{ik} \triangleq & \mathbb{E}_{q(\boldsymbol{\theta})} [\log \pi_k] + \frac{1}{2} \mathbb{E}_{q(\boldsymbol{\theta})} [\log \vert \boldsymbol{\Lambda}_k] - \frac{D}{2} \log(2\pi) \\
+&	-\frac{1}{2} \mathbb{E}_{q(\boldsymbol{\theta})}\left[ (\mathbf{x}_i - \boldsymbol{\mu}_k)^{\top} \boldsymbol{\Lambda}_k (\mathbf{x}_i - \boldsymbol{\mu}_k)\right]  \tag{21.128} 
+\end{align*}
+$$
+使用事实$q(\boldsymbol{\pi}) = \text{Dir}(\boldsymbol{\pi})$，我们有
+$$
+\begin{align*}
+\log \tilde{\pi}_k \triangleq \mathbb{E}[\log \pi_k] = \psi(\alpha_k) - \psi\left( \sum_{k^{\prime}} \alpha_{k^{\prime}} \right) 		\tag{21.129}
+\end{align*}
+$$
+其中$\psi()$是digamma函数。下面我们使用事实
+$$
+\begin{align*}
+q(\boldsymbol{\mu}_k, \boldsymbol{\Lambda}_k) = \mathcal{N}(\boldsymbol{\mu}_k \vert \mathbf{m}_k, (\beta_k\boldsymbol{\Lambda}_k)^{-1})\text{Wi}(\boldsymbol{\Lambda}_k\vert \mathbf{L}_k, \mu_k)		\tag{21.130}
+\end{align*}
+$$
+
+<!-- \paragraph{Derivation of $q(\theta)$ (variational M step)} -->
+#### Derivation of $q(\theta)$ (variational M step)
+使用均值场菜单，我们有
+$$
+\begin{align*}
+\log q(\boldsymbol{\theta}) =& \log p(\boldsymbol{\pi}) + \sum_{k} \log p(\mu_k, \boldsymbol{\Lambda}_k) + \sum_{i} \mathbb{E}_{q(\mathbf{z})}[\log p(\mathbf{z}_i\vert \boldsymbol{\pi})] \\
+&+\sum_k \sum_i \mathbb{E}_{q(\mathbf{z})}[z_{ik}] \log \mathcal{N}(\mathbf{x}_i \vert \boldsymbol{\mu}_k, \boldsymbol{\Lambda}_k^{-1}) +\text{const}	\tag{21.135}
+\end{align*}
+$$
+这个因子的形式
+$$
+\begin{align*}
+q(\boldsymbol{\theta}) = q(\boldsymbol{\pi})\prod_k q((\boldsymbol{\mu}_k, \boldsymbol{\Lambda}_k))		\tag{21.136}
+\end{align*}
+$$
+对于$\boldsymbol{\pi}$项，我们有
+$$
+\begin{align*}
+\log q(\boldsymbol{\pi}) = (\alpha_0 - 1) \sum_k \log \pi_{k} + \sum_{k} \sum_{i} r_{ik}\log \pi_{k} + \text{const} \tag{21.137}
+\end{align*}
+$$
+我们可以将这个看作一个狄利克雷分布
+$$
+\begin{align*} 
+q(\boldsymbol{\pi}) &=  \text{Dir}(q(\boldsymbol{\pi})\vert \boldsymbol{\alpha})				\\
+\alpha_k &= \alpha_0 + N_k	 	\\
+N_k &= \sum_i r_{ik}  \tag{21.138-140}
+\end{align*}
+$$
+<!-- \paragraph{边缘似然的下界(Lower bound on the marginal likelihood)} -->
+#### 边缘似然的下界(Lower bound on the marginal likelihood)
+算法尝试最大化如下的下界
+$$
+\begin{align*} 
+\mathcal{L} = \sum_{\mathbf{z}} \int q(\mathbf{z}, \boldsymbol{\theta}) \log \frac{p(\mathbf{x,z}, \boldsymbol{\theta})}{q(\mathbf{z}, \boldsymbol{\theta})} \tag{21.148}
+\end{align*}
+$$
+这个量在每次迭代中应该单调增加。如图\ref{fig21.7}。不幸的是，推导边界有点混乱，因为我们需要计算未归一化对数后验概率以及$ q $分布的熵。我们将细节(类似于第21.5.1.6节)留给练习21.4。
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[scale=0.4]{Figure21.7}
+	\caption{图21.8中VB算法每次迭代的下界。曲线的陡峭部分对应于算法计算出它可以通过“消除”不必要的混合成分来增加界限的位置，如21.6.1.6节中指出的。高原对应着缓慢移动的星团。}
+	\label{fig21.7}
+\end{figure}
+
+<!-- \paragraph{预测分布的后验(Posterior predictive distribution)} -->
+#### 预测分布的后验(Posterior predictive distribution)
+我们已经证明近似后验的形式为
+$$
+\begin{align*} 
+q(\boldsymbol{\pi}) = \text{Dir}(\boldsymbol{\pi}\vert \boldsymbol{\alpha})	\prod_{k}\mathcal{N}(\boldsymbol{\mu}_k\vert \mathbf{m}_k, (\beta_k\boldsymbol{\Lambda}_k)^{-1})\text{Wi}(\boldsymbol{\Lambda}_k\vert\mathbf{L}_k, \nu_k)	\tag{21.149}
+\end{align*}
+$$
+因此，后验预测密度可以如下近似，是哟4.6.3.6节中的结果
+$$
+\begin{align*} 
+p(\mathbf{x}\vert \mathcal{N}) &\approx \sum_z \int p(\mathbf{x}\vert z,\boldsymbol{\theta}) p(z \vert \boldsymbol{\theta}) q(\boldsymbol{\theta}) d\boldsymbol{\theta} 	\\
+&= \sum_k \int \pi_k \mathcal{N}(\mathbf{x} \vert \boldsymbol{\mu}_k, \boldsymbol{\Lambda}_k^{-1}) q(\boldsymbol{\theta}) d\boldsymbol{\theta} 	 \\
+&= \sum_k \frac{\alpha_k}{\sum_{k^{\prime}}\alpha_{k^{\prime}}}\mathcal{T}(\mathbf{x} \vert \mathbf{m}_k, \mathbf{M}_k, \nu_k+ 1-D)	\tag{21.150-152} 
+\end{align*}
+$$
+这只是学生分布的加权和。如果我们使用插件近似，我们将得到高斯分布的加权和。
+
+<!-- \subsection{变分消息传递与VIBES(Variational message passing and VIBES)} -->
+## 变分消息传递与VIBES(Variational message passing and VIBES)
+我们已经看到，平均场方法，至少是完全分解的方法，都是非常相似的：只需计算每个节点的完全条件，并平均出邻居。这与Gibbs采样(第24.2节)非常相似，只是方程的推导通常需要更多的工作。幸运的是，可以导出适用于所有CPD都在指数族中的任意DGM的通用更新方程组，并且所有父节点都具有共轭分布(Ghahramani和Beal 2001)(参见(Wand et al.2011)，了解处理非共轭先验的最新扩展。)然后可以扫过图，以类似于Gibbs采样的方式一次更新一个节点。这被称为\textbf{变分消息传递(variational message passing)}或VMP（Winn和Bishop，2005），并已在开源程序VIBES5中实现。这是一个类似于BUGS的VB程序，它是第24.2.6节中讨论的Gibbs采样的通用程序。
+
+VMP/均值场最适合于一个或多个隐节点是连续变量的推理(例如，在执行“贝叶斯学习”时)。对于所有隐藏节点都是离散的模型，可以使用更精确的近似推理算法，如第22章所述。
