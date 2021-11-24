@@ -6,7 +6,7 @@
   - [8.3 模型拟合(Model fitting)](#83-模型拟合model-fitting)
     - [8.3.1 MLE](#831-mle)
     - [8.3.2 最速下降(Steepest descent)](#832-最速下降steepest-descent)
-    - [8.3.3 牛顿法(Newton’s method)](#833-牛顿法newtons-method)
+    - [8.3.3 牛顿法(Newton's method)](#833-牛顿法newtons-method)
     - [8.3.4 迭代重加权最小二乘(Iteratively reweighted least squares(IRLS))](#834-迭代重加权最小二乘iteratively-reweighted-least-squaresirls)
     - [8.3.5 Quasi-Newton (variable metric) methods](#835-quasi-newton-variable-metric-methods)
     - [8.3.6 $\ell_2$正则化(regularization)](#836-ell_2正则化regularization)
@@ -60,16 +60,16 @@ logistics回归的负对数似然给定为
 $$
 \begin{aligned}
     \text{NLL}(\mathbf{w}) &= -\sum_{i=1}^{N}\log\left[\mu_{i}^{\mathbb{I}(y_i=1)}\times(1-\mu_i)^{\mathbb{I}(y_i=0)} \right] \\
-    &= -\sum_{i=1}^{N}\left[ y_i\log\mu_i+(1-y_i)\log(1\mu_i)  \right]
+    &= -\sum_{i=1}^{N}\left[ y_i\log\mu_i+(1-y_i)\log(1-\mu_i)  \right]
 \end{aligned}
 $$
 这也称为误差函数的**交叉熵**。
 
-这个方程的另一种书写方式如下。假设$\tilde{y}_i\in\{-1,+1\}$来替代$y_{i}\in{0,1}$。我们有$p(y=1)=\frac{1}{1+\exp(\mathbf{-w}^T\mathbf{x})}$。我们有$p(y=-1)=\frac{1}{1+\exp(-\mathbf{w}^T\mathbf{x})}$且$p(y=1)=\frac{1}{1+\exp(+\mathbf{w}^T\mathbf{x})}$。因此
+这个方程的另一种书写方式如下。假设用$\tilde{y}_i\in\{-1,+1\}$来替代$y_{i}\in{0,1}$。我们有$p(y=1)=\frac{1}{1+\exp(\mathbf{-w}^T\mathbf{x})}$。我们有$p(y=1)=\frac{1}{1+\exp(-\mathbf{w}^T\mathbf{x})}$且$p(y=-1)=\frac{1}{1+\exp(+\mathbf{w}^T\mathbf{x})}$。因此
 $$
 \text{NLL}(\mathbf{w})=\sum_{i=1}^{N}\log\left(1+\exp\left(-\tilde{y}_i\mathbf{w}^T\mathbf{x}_i\right)\right)    \tag{8.4}
 $$
-不像线性回归，我们不能将MLE写成闭环形式。相反的，我们需要使用一种优化算法来计算这个方程。为此，我们需要计算出梯度与Hessian。
+不像线性回归，我们不能将MLE写成闭形。相反的，我们需要使用一种优化算法来计算这个方程。为此，我们需要计算出梯度与Hessian。
 
 在logistics回归中，可以证明梯度与Hessian给定为
 $$
@@ -82,6 +82,7 @@ $$
 其中$\mathbf{S}\triangleq\text{diag}(\mu_i(1-\mu_i))$。可以证明$\mathbf{H}$是正定的。因此NLL是凸的，有唯一的全局极小值。之下我们讨论一些寻找最小值的方法。
 
 ### 8.3.2 最速下降(Steepest descent)
+
 ![image](Figure8.2.png)
 也许，对于无约束最优化最简单的方法是梯度下降方法，也称为最速下降。写为如下
 $$
@@ -101,7 +102,7 @@ $$
 $$
 \phi(\eta) = f(\boldsymbol{\theta}_k + \eta \mathbf{d}_k)   \tag{8.11}
 $$ 
-是这称为直线最小化或是一维搜索。有多种解决这种1维优化问题。
+是这称为直线最小化或是线搜索(line search)。有多种解决这种1维优化问题。
 
 ![image](Figure8.3.png)
 
@@ -115,7 +116,7 @@ $$
 
 另一种最小化"zig-zag"影响的方式是使用**共轭梯度**方法。这是为了形如$f(\boldsymbol{\theta})=\boldsymbol{\theta}^T\mathbf{A}\boldsymbol{\theta}$二次型目标函数选择的方法，源于求解线性系统。然而，非线性GC并不是很流行。
 
-### 8.3.3 牛顿法(Newton’s method)
+### 8.3.3 牛顿法(Newton's method)
 
 可以通过考虑空间曲率获得更快的优化方法。这种方法称为**二阶最优化方法**。首要例子为牛顿方法。这是一种迭代方法，组成如下
 $$
@@ -207,11 +208,11 @@ $$
 
 ### 8.3.7 多分类的logistics回归(Multi-class logistic regression)
 
-我们现在考虑**multinomial logistics回归**，有时也称为**最大熵分类器**。模型的形式为
+我们现在考虑**多元(multinomial) logistics回归**，有时也称为**最大熵分类器**。模型的形式为
 $$
 p(y=c|\mathbf{x},\mathbf{W}) = \frac{\exp(\mathbf{w}_c^T\mathbf{x})}{\sum_{c^{\prime}=1}^C \exp(\mathbf{w}_{c^{\prime}}^T\mathbf{x})}   \tag{8.33}
 $$
-有一个小小的变体，称为**条件logit模型**，针对每个数据案例在不同的类集合上进行归一化；这对于用户在提供给他们的不同项目集之间进行的建模选择非常有用。
+有一个轻微的变体，称为**条件logit模型**，针对每个数据案例在不同的类集合上进行归一化；这对于用户在提供给他们的不同项目集之间进行的建模选择非常有用。
 
 我们现在介绍一些符号。令$\mu_{ic}=p(y_i=c|\mathbf{x}_i,\mathbf{W}=\mathcal{S}(\boldsymbol{\eta}_i)_c$，其中$\boldsymbol{\eta}_i=\mathbf{W}^T\mathbf{x}_i$是一个$C\times1$的向量。也可以令$y_{ic}=\mathbb{I}(y_i=c)$是一个$y_i$的one-of-C编码；那么$\mathbf{y}_i$是一个位向量，其中当且仅当$y_i=c$时第$c$个位开启。根据(Krishnapuram et al. 2005)，我们可以$\mathbf{w}_c=0$来保证可识别性，且定义$\mathbf{w} = \text{vec}(\mathbf{W}(:,1:C-1))$为一个$D\times(C-1)$的列向量。
 
@@ -244,9 +245,9 @@ $$
 
 ## 8.4 Bayesian logistic regression
 
-很自然的想要计算logistics回归模型参数上的完全后验$p(\mathbf{w}|\mathcal{D})$。这对于我们希望将置信区间与我们的预测相关联的任何情况都是有用的(例如，在解决上下文bandit问题时，这是必要的，见第5.7.3.1节)。
+很自然的想要计算logistics回归模型参数的完全后验$p(\mathbf{w}|\mathcal{D})$。这对于我们任意想将置信区间与我们的预测相关联的情况都是很有用的(例如，在解决上下文bandit问题时，这是必要的，见第5.7.3.1节)。
 
-不幸的是，不像线性回归那样，我们无法精确计算，因为这里没有logistics回归的方便的共轭先验。我们讨论一个简单的近似；一些其他的方法包括MCMC，变分推断，期望传播等等。为了简单起见，我们坚持使用二元逻辑回归。
+不幸的是，不像线性回归那样，我们无法精确计算，因为这里没有logistics回归的方便的**共轭先验(conjugate prior)**。我们讨论一个简单的近似；一些其他的方法包括**MCMC，变分推断(variational inference)，期望传播(expectation propagation)** 等等。为了符号简单性，我们坚持使用二元逻辑回归。
 
 ### 8.4.1 Laplace approximation
 
@@ -254,7 +255,7 @@ $$
 $$
 p(\boldsymbol{\theta}|\mathcal{D}) = \frac{1}{Z}e^{-E(\boldsymbol{\theta})} \tag{8.49}
 $$
-其中$E(\boldsymbol{\theta})$称为能量函数，等于非标准化对数后验的负对数$E(\boldsymbol{\theta})=-\log p(\boldsymbol{\theta},\mathcal{D}),Z=p(\mathcal{D})$是归一化常数。在众数$\boldsymbol{\theta}^*$(拥有最小能量状态)附近执行一个泰勒展开式，我们得到
+其中$E(\boldsymbol{\theta})$称为**能量函数**(energy function)，其等于未归一化的对数后验的负对数$E(\boldsymbol{\theta})=-\log p(\boldsymbol{\theta},\mathcal{D}),Z=p(\mathcal{D})$是归一化常数。在众数$\boldsymbol{\theta}^*$(也就是最低能量状态)附近执行一个泰勒展开式，我们得到
 $$
 E(\boldsymbol{\theta}) \approx E(\boldsymbol{\theta}^*) + (\boldsymbol{\theta}-\boldsymbol{\theta}^*)^T\mathbf{g} + \frac{1}{2}(\boldsymbol{\theta}-\boldsymbol{\theta}^*)^T\mathbf{H}(\boldsymbol{\theta}-\boldsymbol{\theta}^*)   \tag{8.50}
 $$
